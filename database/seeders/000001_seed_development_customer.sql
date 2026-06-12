@@ -14,7 +14,7 @@ begin
     )
     values (
       dev_user_id, 'customer@phylax.local', 'Development Customer',
-      '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+      crypt('password', gen_salt('bf')),
       now(), 'customer', 'active', now(), now()
     );
   end if;
