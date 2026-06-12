@@ -1,0 +1,39 @@
+{
+  "server": {
+    "addr": ":8080"
+  },
+  "token": {
+    "issuer": "phylax",
+    "secret": "replace-with-at-least-32-bytes",
+    "ttl_seconds": 900
+  },
+  "challenges": {
+    "ttl_seconds": 300
+  },
+  "apps": [
+    {
+      "id": "nexbox",
+      "name": "NexBox",
+      "android": {
+        "enabled": true,
+        "provider": "play_integrity",
+        "package_name": "com.nexbox.app",
+        "service_account_json_env": "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+        "require_play_recognized": true,
+        "required_device_integrity": ["MEETS_DEVICE_INTEGRITY"]
+      },
+      "apple": {
+        "enabled": true,
+        "provider": "app_attest",
+        "bundle_id": "com.nexbox.app",
+        "team_id": "ABCDE12345",
+        "environment": "production"
+      },
+      "firebase": {
+        "enabled": false,
+        "project_id": ""
+      }
+    }
+  ]
+}
+
