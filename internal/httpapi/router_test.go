@@ -32,14 +32,14 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 	server := httptest.NewServer(newTestRouter(t))
 	defer server.Close()
 
-	challenge := postJSON[phylax.CreateChallengeResponse](t, server.URL+"/v1/challenges", map[string]any{
+	challenge := postJSONEnvelope[phylax.CreateChallengeResponse](t, server.URL+"/v1/challenges", map[string]any{
 		"app_id":     "demo",
 		"platform":   "android",
 		"action":     "ai.ask",
 		"install_id": "install_123",
 	}, http.StatusCreated)
 
-	verified := postJSON[phylax.VerifyAttestationResponse](t, server.URL+"/v1/attestations/verify", map[string]any{
+	verified := postJSONEnvelope[phylax.VerifyAttestationResponse](t, server.URL+"/v1/attestations/verify", map[string]any{
 		"app_id":       "demo",
 		"platform":     "android",
 		"challenge_id": challenge.ChallengeID,
@@ -47,7 +47,7 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 		"token":        "mock",
 	}, http.StatusOK)
 
-	introspection := postJSON[phylax.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
+	introspection := postJSONEnvelope[phylax.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
 		"token": verified.Token,
 	}, http.StatusOK)
 	require.True(t, introspection.Active, introspection.Error)
@@ -75,6 +75,30 @@ func postJSON[T any](t *testing.T, url string, payload map[string]any, expectedS
 	}
 	var decoded T
 	require.NoError(t, json.NewDecoder(response.Body).Decode(&decoded))
+	return decoded
+}
+
+func postJSONEnvelope[T any](t *testing.T, url string, payload map[string]any, expectedStatus int) T {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	response, err := http.Post(url, "application/json", bytes.NewReader(body))
+	require.NoError(t, err)
+	defer response.Body.Close()
+	if response.StatusCode != expectedStatus {
+		responseBody, _ := io.ReadAll(response.Body)
+		t.Fatalf("expected %d, got %d: %s", expectedStatus, response.StatusCode, responseBody)
+	}
+	var envelope struct {
+		Error   bool            `json:"error"`
+		Message string          `json:"message"`
+		Data    json.RawMessage `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(response.Body).Decode(&envelope))
+	require.False(t, envelope.Error, envelope.Message)
+
+	var decoded T
+	require.NoError(t, json.Unmarshal(envelope.Data, &decoded))
 	return decoded
 }
 

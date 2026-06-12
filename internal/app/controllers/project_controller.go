@@ -10,6 +10,7 @@ import (
 	"github.com/pycify/phylax/internal/app/middleware"
 	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	projectdto "github.com/pycify/phylax/internal/app/types/dto/projects"
+	"github.com/pycify/phylax/internal/app/types/response"
 	projectvalidators "github.com/pycify/phylax/internal/app/validators/projects"
 )
 
@@ -33,9 +34,9 @@ func NewProjectController(service *projectservice.Service) *ProjectController {
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		payload				body		projects.CreateProjectRequest		true	"Project payload"
-//	@Success	201					{object}	projects.ProjectResponse
-//	@Failure	400					{object}	httpapi.ErrorResponse
-//	@Failure	422					{object}	httpapi.ErrorResponse
+//	@Success	201					{object}	response.APIResponse[projects.ProjectResponse]
+//	@Failure	400					{object}	response.ErrorResponse
+//	@Failure	422					{object}	response.ErrorResponse
 //	@Router		/v1/projects [post]
 func (c *ProjectController) CreateProject(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -60,8 +61,8 @@ func (c *ProjectController) CreateProject(w http.ResponseWriter, req *http.Reque
 //	@Tags		Projects
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Success	200					{object}	projects.ProjectsResponse
-//	@Failure	400					{object}	httpapi.ErrorResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectsResponse]
+//	@Failure	400					{object}	response.ErrorResponse
 //	@Router		/v1/projects [get]
 func (c *ProjectController) ListProjects(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -87,8 +88,8 @@ func (c *ProjectController) ListProjects(w http.ResponseWriter, req *http.Reques
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		project_id			path		string	true	"Project id"
-//	@Success	200					{object}	projects.ProjectResponse
-//	@Failure	404					{object}	httpapi.ErrorResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectResponse]
+//	@Failure	404					{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id} [get]
 func (c *ProjectController) GetProject(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -112,8 +113,8 @@ func (c *ProjectController) GetProject(w http.ResponseWriter, req *http.Request)
 //	@Security	BearerAuth
 //	@Param		project_id			path		string								true	"Project id"
 //	@Param		payload				body		projects.UpdateProjectRequest		true	"Project payload"
-//	@Success	200					{object}	projects.ProjectResponse
-//	@Failure	404					{object}	httpapi.ErrorResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectResponse]
+//	@Failure	404					{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id} [patch]
 func (c *ProjectController) UpdateProject(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -140,7 +141,7 @@ func (c *ProjectController) UpdateProject(w http.ResponseWriter, req *http.Reque
 //	@Security	BearerAuth
 //	@Param		project_id			path	string	true	"Project id"
 //	@Success	204
-//	@Failure	404	{object}	httpapi.ErrorResponse
+//	@Failure	404	{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id} [delete]
 func (c *ProjectController) DeleteProject(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -163,8 +164,8 @@ func (c *ProjectController) DeleteProject(w http.ResponseWriter, req *http.Reque
 //	@Security	BearerAuth
 //	@Param		project_id			path		string									true	"Project id"
 //	@Param		payload				body		projects.CreateProjectAppRequest		true	"App payload"
-//	@Success	201					{object}	projects.ProjectAppResponse
-//	@Failure	422					{object}	httpapi.ErrorResponse
+//	@Success	201					{object}	response.APIResponse[projects.ProjectAppResponse]
+//	@Failure	422					{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id}/apps [post]
 func (c *ProjectController) CreateProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -190,7 +191,7 @@ func (c *ProjectController) CreateProjectApp(w http.ResponseWriter, req *http.Re
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		project_id			path		string	true	"Project id"
-//	@Success	200					{object}	projects.ProjectAppsResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectAppsResponse]
 //	@Router		/v1/projects/{project_id}/apps [get]
 func (c *ProjectController) ListProjectApps(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -217,8 +218,8 @@ func (c *ProjectController) ListProjectApps(w http.ResponseWriter, req *http.Req
 //	@Security	BearerAuth
 //	@Param		project_id			path		string	true	"Project id"
 //	@Param		app_id				path		string	true	"App id"
-//	@Success	200					{object}	projects.ProjectAppResponse
-//	@Failure	404					{object}	httpapi.ErrorResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectAppResponse]
+//	@Failure	404					{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id}/apps/{app_id} [get]
 func (c *ProjectController) GetProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -243,8 +244,8 @@ func (c *ProjectController) GetProjectApp(w http.ResponseWriter, req *http.Reque
 //	@Param		project_id			path		string									true	"Project id"
 //	@Param		app_id				path		string									true	"App id"
 //	@Param		payload				body		projects.UpdateProjectAppRequest		true	"App payload"
-//	@Success	200					{object}	projects.ProjectAppResponse
-//	@Failure	404					{object}	httpapi.ErrorResponse
+//	@Success	200					{object}	response.APIResponse[projects.ProjectAppResponse]
+//	@Failure	404					{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id}/apps/{app_id} [patch]
 func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -272,7 +273,7 @@ func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Re
 //	@Param		project_id			path	string	true	"Project id"
 //	@Param		app_id				path	string	true	"App id"
 //	@Success	204
-//	@Failure	404	{object}	httpapi.ErrorResponse
+//	@Failure	404	{object}	response.ErrorResponse
 //	@Router		/v1/projects/{project_id}/apps/{app_id} [delete]
 func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := requireUserID(w, req)
@@ -316,15 +317,21 @@ func writeServiceError(w http.ResponseWriter, err error) {
 	writeError(w, http.StatusUnprocessableEntity, err.Error())
 }
 
-func writeJSON(w http.ResponseWriter, status int, data any) {
+func writeJSON[T any](w http.ResponseWriter, status int, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(response.APIResponse[T]{
+		Error:   false,
+		Message: "success",
+		Data:    &data,
+	})
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]any{
-		"error":   true,
-		"message": message,
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(response.ErrorResponse{
+		Error:   true,
+		Message: message,
 	})
 }

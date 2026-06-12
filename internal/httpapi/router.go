@@ -11,6 +11,7 @@ import (
 	"github.com/pycify/phylax/internal/app/controllers"
 	approutes "github.com/pycify/phylax/internal/app/routes"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
+	"github.com/pycify/phylax/internal/app/types/response"
 	"github.com/pycify/phylax/internal/phylax"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -70,7 +71,7 @@ func (r *Router) openapi(w http.ResponseWriter, req *http.Request) {
 //	@Summary	Service health
 //	@Tags		System
 //	@Produce	json
-//	@Success	200	{object}	HealthResponse
+//	@Success	200	{object}	response.APIResponse[httpapi.HealthResponse]
 //	@Router		/v1/health [get]
 func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, HealthResponse{
@@ -86,9 +87,9 @@ func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.CreateChallengeRequest	true	"Challenge payload"
-//	@Success	201		{object}	phylax.CreateChallengeResponse
-//	@Failure	400		{object}	ErrorResponse
-//	@Failure	422		{object}	ErrorResponse
+//	@Success	201		{object}	response.APIResponse[phylax.CreateChallengeResponse]
+//	@Failure	400		{object}	response.ErrorResponse
+//	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/challenges [post]
 func (r *Router) createChallenge(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.CreateChallengeRequest
@@ -116,9 +117,9 @@ func (r *Router) createChallenge(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.VerifyAttestationRequest	true	"Attestation payload"
-//	@Success	200		{object}	phylax.VerifyAttestationResponse
-//	@Failure	400		{object}	ErrorResponse
-//	@Failure	422		{object}	ErrorResponse
+//	@Success	200		{object}	response.APIResponse[phylax.VerifyAttestationResponse]
+//	@Failure	400		{object}	response.ErrorResponse
+//	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/attestations/verify [post]
 func (r *Router) verifyAttestation(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.VerifyAttestationRequest
@@ -146,9 +147,9 @@ func (r *Router) verifyAttestation(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.IntrospectRequest	true	"Token payload"
-//	@Success	200		{object}	phylax.IntrospectResponse
-//	@Failure	400		{object}	ErrorResponse
-//	@Failure	422		{object}	ErrorResponse
+//	@Success	200		{object}	response.APIResponse[phylax.IntrospectResponse]
+//	@Failure	400		{object}	response.ErrorResponse
+//	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/sessions/introspect [post]
 func (r *Router) introspect(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.IntrospectRequest
@@ -168,15 +169,21 @@ func readJSON(req *http.Request, out any) error {
 	return json.NewDecoder(req.Body).Decode(out)
 }
 
-func writeJSON(w http.ResponseWriter, status int, data any) {
+func writeJSON[T any](w http.ResponseWriter, status int, data T) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(response.APIResponse[T]{
+		Error:   false,
+		Message: "success",
+		Data:    &data,
+	})
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]any{
-		"error":   true,
-		"message": message,
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(response.ErrorResponse{
+		Error:   true,
+		Message: message,
 	})
 }

@@ -26,8 +26,8 @@ func NewAuthController(service *identityservice.AuthService) *AuthController {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.CreateAccountRequest	true	"Account payload"
-//	@Success	201		{object}	identity.AccountCreatedResponse
-//	@Failure	422		{object}	httpapi.ErrorResponse
+//	@Success	201		{object}	response.APIResponse[identity.AccountCreatedResponse]
+//	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/auth/accounts [post]
 func (c *AuthController) CreateAccount(w http.ResponseWriter, req *http.Request) {
 	var payload identityvalidators.CreateAccountRequest
@@ -52,8 +52,8 @@ func (c *AuthController) CreateAccount(w http.ResponseWriter, req *http.Request)
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.VerifyEmailRequest	true	"OTP payload"
-//	@Success	200		{object}	identity.AuthTokenResponse
-//	@Failure	422		{object}	httpapi.ErrorResponse
+//	@Success	200		{object}	response.APIResponse[identity.AuthTokenResponse]
+//	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/auth/verify-email [post]
 func (c *AuthController) VerifyEmail(w http.ResponseWriter, req *http.Request) {
 	var payload identityvalidators.VerifyEmailRequest
@@ -78,8 +78,8 @@ func (c *AuthController) VerifyEmail(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.LoginRequest	true	"Login payload"
-//	@Success	200		{object}	identity.AuthTokenResponse
-//	@Failure	401		{object}	httpapi.ErrorResponse
+//	@Success	200		{object}	response.APIResponse[identity.AuthTokenResponse]
+//	@Failure	401		{object}	response.ErrorResponse
 //	@Router		/v1/auth/login [post]
 func (c *AuthController) Login(w http.ResponseWriter, req *http.Request) {
 	var payload identityvalidators.LoginRequest
@@ -104,7 +104,7 @@ func (c *AuthController) Login(w http.ResponseWriter, req *http.Request) {
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Success	204
-//	@Failure	401	{object}	httpapi.ErrorResponse
+//	@Failure	401	{object}	response.ErrorResponse
 //	@Router		/v1/auth/logout [post]
 func (c *AuthController) Logout(w http.ResponseWriter, req *http.Request) {
 	token, ok := middleware.CurrentAccessToken(req)
