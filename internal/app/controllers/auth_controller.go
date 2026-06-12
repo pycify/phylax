@@ -26,7 +26,7 @@ func NewAuthController(service *identityservice.AuthService) *AuthController {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.CreateAccountRequest	true	"Account payload"
-//	@Success	201		{object}	response.APIResponse[identity.AccountCreatedResponse]
+//	@Success	201		{object}	response.AccountCreatedResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/auth/accounts [post]
 func (c *AuthController) CreateAccount(w http.ResponseWriter, req *http.Request) {
@@ -52,7 +52,7 @@ func (c *AuthController) CreateAccount(w http.ResponseWriter, req *http.Request)
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.VerifyEmailRequest	true	"OTP payload"
-//	@Success	200		{object}	response.APIResponse[identity.AuthTokenResponse]
+//	@Success	200		{object}	response.AuthTokenResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/auth/verify-email [post]
 func (c *AuthController) VerifyEmail(w http.ResponseWriter, req *http.Request) {
@@ -78,7 +78,7 @@ func (c *AuthController) VerifyEmail(w http.ResponseWriter, req *http.Request) {
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		identity.LoginRequest	true	"Login payload"
-//	@Success	200		{object}	response.APIResponse[identity.AuthTokenResponse]
+//	@Success	200		{object}	response.AuthTokenResponse
 //	@Failure	401		{object}	response.ErrorResponse
 //	@Router		/v1/auth/login [post]
 func (c *AuthController) Login(w http.ResponseWriter, req *http.Request) {

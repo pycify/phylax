@@ -24,7 +24,7 @@ func NewAttestationController(service *attestationservice.Service) *AttestationC
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.CreateChallengeRequest	true	"Challenge payload"
-//	@Success	201		{object}	response.APIResponse[phylax.CreateChallengeResponse]
+//	@Success	201		{object}	response.CreateChallengeResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/challenges [post]
@@ -49,7 +49,7 @@ func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.VerifyAttestationRequest	true	"Attestation payload"
-//	@Success	200		{object}	response.APIResponse[phylax.VerifyAttestationResponse]
+//	@Success	200		{object}	response.VerifyAttestationResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/attestations/verify [post]
@@ -74,7 +74,7 @@ func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *ht
 //	@Accept		json
 //	@Produce	json
 //	@Param		payload	body		phylax.IntrospectRequest	true	"Token payload"
-//	@Success	200		{object}	response.APIResponse[phylax.IntrospectResponse]
+//	@Success	200		{object}	response.IntrospectResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/sessions/introspect [post]

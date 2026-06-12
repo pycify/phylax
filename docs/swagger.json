@@ -1,8 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "Server-side mobile app attestation for Android, Apple, and Firebase-backed clients.",
+        "title": "Phylax API",
+        "contact": {},
+        "version": "0.1.0"
     },
+    "basePath": "/",
     "paths": {
         "/v1/attestations/verify": {
             "post": {
@@ -31,19 +35,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/phylax.VerifyAttestationResponse"
+                            "$ref": "#/definitions/response.VerifyAttestationResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -76,13 +80,13 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/identity.AccountCreatedResponse"
+                            "$ref": "#/definitions/response.AccountCreatedResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -115,13 +119,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/identity.AuthTokenResponse"
+                            "$ref": "#/definitions/response.AuthTokenResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -143,12 +147,12 @@
                 "summary": "Logout current access token",
                 "responses": {
                     "204": {
-                        "description": ""
+                        "description": "No Content"
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -181,13 +185,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/identity.AuthTokenResponse"
+                            "$ref": "#/definitions/response.AuthTokenResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -220,19 +224,19 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/phylax.CreateChallengeResponse"
+                            "$ref": "#/definitions/response.CreateChallengeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -251,7 +255,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.HealthResponse"
+                            "$ref": "#/definitions/response.HealthResponse"
                         }
                     }
                 }
@@ -275,13 +279,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectsResponse"
+                            "$ref": "#/definitions/response.ProjectsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -317,19 +321,19 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectResponse"
+                            "$ref": "#/definitions/response.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -362,13 +366,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectResponse"
+                            "$ref": "#/definitions/response.ProjectResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -385,7 +389,7 @@
                 "tags": [
                     "Projects"
                 ],
-                "summary": "Soft delete project",
+                "summary": "Delete project",
                 "parameters": [
                     {
                         "type": "string",
@@ -397,12 +401,12 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": ""
+                        "description": "No Content"
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -445,13 +449,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectResponse"
+                            "$ref": "#/definitions/response.ProjectResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -484,7 +488,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectAppsResponse"
+                            "$ref": "#/definitions/response.ProjectAppsResponse"
                         }
                     }
                 }
@@ -527,13 +531,13 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectAppResponse"
+                            "$ref": "#/definitions/response.ProjectAppResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -573,13 +577,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectAppResponse"
+                            "$ref": "#/definitions/response.ProjectAppResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -615,12 +619,12 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": ""
+                        "description": "No Content"
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -670,13 +674,59 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/projects.ProjectAppResponse"
+                            "$ref": "#/definitions/response.ProjectAppResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/projects/{project_id}/apps/{app_id}/attestation-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Project Apps"
+                ],
+                "summary": "Get project app attestation status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project id",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "app_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.AppAttestationStatusResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -709,59 +759,84 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/phylax.IntrospectResponse"
+                            "$ref": "#/definitions/response.IntrospectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.ErrorResponse"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
             }
         }
     },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type \"Bearer \" followed by a Phylax access token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
-    },
     "definitions": {
-        "httpapi.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "message": {
-                    "type": "string",
-                    "example": "validation failed"
-                }
-            }
+        "enum.AppEnvironment": {
+            "type": "string",
+            "enum": [
+                "development",
+                "staging",
+                "production"
+            ],
+            "x-enum-varnames": [
+                "AppEnvironmentDevelopment",
+                "AppEnvironmentStaging",
+                "AppEnvironmentProduction"
+            ]
         },
-        "httpapi.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "ok": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "service": {
-                    "type": "string",
-                    "example": "phylax"
-                }
-            }
+        "enum.AppPlatform": {
+            "type": "string",
+            "enum": [
+                "android",
+                "ios"
+            ],
+            "x-enum-varnames": [
+                "AppPlatformAndroid",
+                "AppPlatformIOS"
+            ]
+        },
+        "enum.AppProvider": {
+            "type": "string",
+            "enum": [
+                "play_integrity",
+                "app_attest",
+                "firebase_app_check"
+            ],
+            "x-enum-varnames": [
+                "AppProviderPlayIntegrity",
+                "AppProviderAppAttest",
+                "AppProviderFirebase"
+            ]
+        },
+        "enum.UserStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "suspended"
+            ],
+            "x-enum-varnames": [
+                "UserStatusActive",
+                "UserStatusSuspended"
+            ]
+        },
+        "enum.UserType": {
+            "type": "string",
+            "enum": [
+                "customer",
+                "admin"
+            ],
+            "x-enum-varnames": [
+                "UserTypeCustomer",
+                "UserTypeAdmin"
+            ]
         },
         "identity.AccountCreatedResponse": {
             "type": "object",
@@ -844,13 +919,13 @@
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/enum.UserStatus"
                 },
                 "updated_at": {
                     "type": "string"
                 },
                 "user_type": {
-                    "type": "string"
+                    "$ref": "#/definitions/enum.UserType"
                 }
             }
         },
@@ -892,7 +967,7 @@
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string"
+                    "$ref": "#/definitions/phylax.Platform"
                 },
                 "risk_level": {
                     "type": "string"
@@ -921,11 +996,15 @@
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string",
                     "enum": [
                         "android",
                         "apple",
                         "firebase"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/phylax.Platform"
+                        }
                     ]
                 },
                 "subject": {
@@ -952,7 +1031,7 @@
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string"
+                    "$ref": "#/definitions/phylax.Platform"
                 }
             }
         },
@@ -981,6 +1060,19 @@
                 }
             }
         },
+        "phylax.Platform": {
+            "type": "string",
+            "enum": [
+                "android",
+                "apple",
+                "firebase"
+            ],
+            "x-enum-varnames": [
+                "PlatformAndroid",
+                "PlatformApple",
+                "PlatformFirebase"
+            ]
+        },
         "phylax.Verdict": {
             "type": "object",
             "properties": {
@@ -998,15 +1090,13 @@
                 },
                 "claims": {
                     "type": "object",
-                    "additionalProperties": {
-                        "type": "any"
-                    }
+                    "additionalProperties": {}
                 },
                 "install_id": {
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string"
+                    "$ref": "#/definitions/phylax.Platform"
                 },
                 "provider": {
                     "type": "string"
@@ -1038,18 +1128,20 @@
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string",
                     "enum": [
                         "android",
                         "apple",
                         "firebase"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/phylax.Platform"
+                        }
                     ]
                 },
                 "proof": {
                     "type": "object",
-                    "additionalProperties": {
-                        "type": "any"
-                    }
+                    "additionalProperties": {}
                 },
                 "subject": {
                     "type": "string"
@@ -1076,6 +1168,55 @@
                 }
             }
         },
+        "projects.AppAttestationStatusDTO": {
+            "type": "object",
+            "properties": {
+                "app_id": {
+                    "type": "string"
+                },
+                "configured": {
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "external_configuration_check": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "next_steps": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "platform": {
+                    "$ref": "#/definitions/enum.AppPlatform"
+                },
+                "provider": {
+                    "$ref": "#/definitions/enum.AppProvider"
+                },
+                "requires_developer_credentials": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "projects.AppAttestationStatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/projects.AppAttestationStatusDTO"
+                }
+            }
+        },
         "projects.CreateProjectAppRequest": {
             "type": "object",
             "required": [
@@ -1094,11 +1235,15 @@
                     "type": "boolean"
                 },
                 "environment": {
-                    "type": "string",
                     "enum": [
                         "development",
                         "staging",
                         "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppEnvironment"
+                        }
                     ]
                 },
                 "name": {
@@ -1112,18 +1257,26 @@
                     "minLength": 3
                 },
                 "platform": {
-                    "type": "string",
                     "enum": [
                         "android",
                         "ios"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppPlatform"
+                        }
                     ]
                 },
                 "provider": {
-                    "type": "string",
                     "enum": [
                         "play_integrity",
                         "app_attest",
                         "firebase_app_check"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppProvider"
+                        }
                     ]
                 }
             }
@@ -1164,7 +1317,7 @@
                     "type": "boolean"
                 },
                 "environment": {
-                    "type": "string"
+                    "$ref": "#/definitions/enum.AppEnvironment"
                 },
                 "id": {
                     "type": "string"
@@ -1176,13 +1329,13 @@
                     "type": "string"
                 },
                 "platform": {
-                    "type": "string"
+                    "$ref": "#/definitions/enum.AppPlatform"
                 },
                 "project_id": {
                     "type": "string"
                 },
                 "provider": {
-                    "type": "string"
+                    "$ref": "#/definitions/enum.AppProvider"
                 },
                 "updated_at": {
                     "type": "string"
@@ -1265,11 +1418,15 @@
                     "type": "boolean"
                 },
                 "environment": {
-                    "type": "string",
                     "enum": [
                         "development",
                         "staging",
                         "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppEnvironment"
+                        }
                     ]
                 },
                 "name": {
@@ -1283,11 +1440,15 @@
                     "minLength": 3
                 },
                 "provider": {
-                    "type": "string",
                     "enum": [
                         "play_integrity",
                         "app_attest",
                         "firebase_app_check"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppProvider"
+                        }
                     ]
                 }
             }
@@ -1310,6 +1471,216 @@
                     "minLength": 2
                 }
             }
+        },
+        "response.AccountCreatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/identity.AccountCreatedResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.AppAttestationStatusResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.AppAttestationStatusResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.AuthTokenResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/identity.AuthTokenResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.CreateChallengeResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/phylax.CreateChallengeResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.HealthData": {
+            "type": "object",
+            "properties": {
+                "ok": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "service": {
+                    "type": "string",
+                    "example": "phylax"
+                }
+            }
+        },
+        "response.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/response.HealthData"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.IntrospectResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/phylax.IntrospectResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ProjectAppResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectAppResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ProjectAppsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectAppsResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ProjectsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectsResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.VerifyAttestationResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/phylax.VerifyAttestationResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer \" followed by a Phylax access token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

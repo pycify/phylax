@@ -1,22 +1,49 @@
+basePath: /
 definitions:
-  httpapi.ErrorResponse:
-    properties:
-      error:
-        example: true
-        type: boolean
-      message:
-        example: validation failed
-        type: string
-    type: object
-  httpapi.HealthResponse:
-    properties:
-      ok:
-        example: true
-        type: boolean
-      service:
-        example: phylax
-        type: string
-    type: object
+  enum.AppEnvironment:
+    enum:
+    - development
+    - staging
+    - production
+    type: string
+    x-enum-varnames:
+    - AppEnvironmentDevelopment
+    - AppEnvironmentStaging
+    - AppEnvironmentProduction
+  enum.AppPlatform:
+    enum:
+    - android
+    - ios
+    type: string
+    x-enum-varnames:
+    - AppPlatformAndroid
+    - AppPlatformIOS
+  enum.AppProvider:
+    enum:
+    - play_integrity
+    - app_attest
+    - firebase_app_check
+    type: string
+    x-enum-varnames:
+    - AppProviderPlayIntegrity
+    - AppProviderAppAttest
+    - AppProviderFirebase
+  enum.UserStatus:
+    enum:
+    - active
+    - suspended
+    type: string
+    x-enum-varnames:
+    - UserStatusActive
+    - UserStatusSuspended
+  enum.UserType:
+    enum:
+    - customer
+    - admin
+    type: string
+    x-enum-varnames:
+    - UserTypeCustomer
+    - UserTypeAdmin
   identity.AccountCreatedResponse:
     properties:
       expires_at:
@@ -73,11 +100,11 @@ definitions:
       id:
         type: string
       status:
-        type: string
+        $ref: '#/definitions/enum.UserStatus'
       updated_at:
         type: string
       user_type:
-        type: string
+        $ref: '#/definitions/enum.UserType'
     type: object
   identity.VerifyEmailRequest:
     properties:
@@ -105,7 +132,7 @@ definitions:
       issued_at:
         type: string
       platform:
-        type: string
+        $ref: '#/definitions/phylax.Platform'
       risk_level:
         type: string
       subject:
@@ -120,11 +147,12 @@ definitions:
       install_id:
         type: string
       platform:
+        allOf:
+        - $ref: '#/definitions/phylax.Platform'
         enum:
         - android
         - apple
         - firebase
-        type: string
       subject:
         type: string
     required:
@@ -146,7 +174,7 @@ definitions:
       nonce:
         type: string
       platform:
-        type: string
+        $ref: '#/definitions/phylax.Platform'
     type: object
   phylax.IntrospectRequest:
     properties:
@@ -164,6 +192,16 @@ definitions:
       session:
         $ref: '#/definitions/phylax.AttestationSession'
     type: object
+  phylax.Platform:
+    enum:
+    - android
+    - apple
+    - firebase
+    type: string
+    x-enum-varnames:
+    - PlatformAndroid
+    - PlatformApple
+    - PlatformFirebase
   phylax.Verdict:
     properties:
       action:
@@ -175,13 +213,12 @@ definitions:
       challenge_id:
         type: string
       claims:
-        additionalProperties:
-          type: any
+        additionalProperties: {}
         type: object
       install_id:
         type: string
       platform:
-        type: string
+        $ref: '#/definitions/phylax.Platform'
       provider:
         type: string
       risk_level:
@@ -198,14 +235,14 @@ definitions:
       key_id:
         type: string
       platform:
+        allOf:
+        - $ref: '#/definitions/phylax.Platform'
         enum:
         - android
         - apple
         - firebase
-        type: string
       proof:
-        additionalProperties:
-          type: any
+        additionalProperties: {}
         type: object
       subject:
         type: string
@@ -228,6 +265,38 @@ definitions:
       verdict:
         $ref: '#/definitions/phylax.Verdict'
     type: object
+  projects.AppAttestationStatusDTO:
+    properties:
+      app_id:
+        type: string
+      configured:
+        type: boolean
+      enabled:
+        type: boolean
+      external_configuration_check:
+        type: string
+      identifier:
+        type: string
+      issues:
+        items:
+          type: string
+        type: array
+      next_steps:
+        items:
+          type: string
+        type: array
+      platform:
+        $ref: '#/definitions/enum.AppPlatform'
+      provider:
+        $ref: '#/definitions/enum.AppProvider'
+      requires_developer_credentials:
+        type: boolean
+    type: object
+  projects.AppAttestationStatusResponse:
+    properties:
+      status:
+        $ref: '#/definitions/projects.AppAttestationStatusDTO'
+    type: object
   projects.CreateProjectAppRequest:
     properties:
       bundle_id:
@@ -237,11 +306,12 @@ definitions:
       enabled:
         type: boolean
       environment:
+        allOf:
+        - $ref: '#/definitions/enum.AppEnvironment'
         enum:
         - development
         - staging
         - production
-        type: string
       name:
         maxLength: 120
         minLength: 2
@@ -251,16 +321,18 @@ definitions:
         minLength: 3
         type: string
       platform:
+        allOf:
+        - $ref: '#/definitions/enum.AppPlatform'
         enum:
         - android
         - ios
-        type: string
       provider:
+        allOf:
+        - $ref: '#/definitions/enum.AppProvider'
         enum:
         - play_integrity
         - app_attest
         - firebase_app_check
-        type: string
     required:
     - environment
     - name
@@ -293,7 +365,7 @@ definitions:
       enabled:
         type: boolean
       environment:
-        type: string
+        $ref: '#/definitions/enum.AppEnvironment'
       id:
         type: string
       name:
@@ -301,11 +373,11 @@ definitions:
       package_name:
         type: string
       platform:
-        type: string
+        $ref: '#/definitions/enum.AppPlatform'
       project_id:
         type: string
       provider:
-        type: string
+        $ref: '#/definitions/enum.AppProvider'
       updated_at:
         type: string
     type: object
@@ -359,11 +431,12 @@ definitions:
       enabled:
         type: boolean
       environment:
+        allOf:
+        - $ref: '#/definitions/enum.AppEnvironment'
         enum:
         - development
         - staging
         - production
-        type: string
       name:
         maxLength: 120
         minLength: 2
@@ -373,11 +446,12 @@ definitions:
         minLength: 3
         type: string
       provider:
+        allOf:
+        - $ref: '#/definitions/enum.AppProvider'
         enum:
         - play_integrity
         - app_attest
         - firebase_app_check
-        type: string
     type: object
   projects.UpdateProjectRequest:
     properties:
@@ -393,8 +467,151 @@ definitions:
         minLength: 2
         type: string
     type: object
+  response.AccountCreatedResponse:
+    properties:
+      data:
+        $ref: '#/definitions/identity.AccountCreatedResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.AppAttestationStatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.AppAttestationStatusResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.AuthTokenResponse:
+    properties:
+      data:
+        $ref: '#/definitions/identity.AuthTokenResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.CreateChallengeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/phylax.CreateChallengeResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ErrorResponse:
+    properties:
+      data: {}
+      error:
+        example: true
+        type: boolean
+      message:
+        type: string
+    type: object
+  response.HealthData:
+    properties:
+      ok:
+        example: true
+        type: boolean
+      service:
+        example: phylax
+        type: string
+    type: object
+  response.HealthResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.HealthData'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.IntrospectResponse:
+    properties:
+      data:
+        $ref: '#/definitions/phylax.IntrospectResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ProjectAppResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectAppResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ProjectAppsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectAppsResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ProjectResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ProjectsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectsResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.VerifyAttestationResponse:
+    properties:
+      data:
+        $ref: '#/definitions/phylax.VerifyAttestationResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
 info:
   contact: {}
+  description: Server-side mobile app attestation for Android, Apple, and Firebase-backed
+    clients.
+  title: Phylax API
+  version: 0.1.0
 paths:
   /v1/attestations/verify:
     post:
@@ -413,15 +630,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/phylax.VerifyAttestationResponse'
+            $ref: '#/definitions/response.VerifyAttestationResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Verify provider proof and issue a Phylax token
       tags:
       - Attestation
@@ -442,11 +659,11 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/identity.AccountCreatedResponse'
+            $ref: '#/definitions/response.AccountCreatedResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Create standard account
       tags:
       - Auth
@@ -467,11 +684,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/identity.AuthTokenResponse'
+            $ref: '#/definitions/response.AuthTokenResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Login with standard provider
       tags:
       - Auth
@@ -481,11 +698,11 @@ paths:
       - application/json
       responses:
         "204":
-          description: ""
+          description: No Content
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Logout current access token
@@ -508,11 +725,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/identity.AuthTokenResponse'
+            $ref: '#/definitions/response.AuthTokenResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Verify standard account email
       tags:
       - Auth
@@ -533,15 +750,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/phylax.CreateChallengeResponse'
+            $ref: '#/definitions/response.CreateChallengeResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Create attestation challenge
       tags:
       - Attestation
@@ -553,7 +770,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httpapi.HealthResponse'
+            $ref: '#/definitions/response.HealthResponse'
       summary: Service health
       tags:
       - System
@@ -565,11 +782,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectsResponse'
+            $ref: '#/definitions/response.ProjectsResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List customer projects
@@ -591,15 +808,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/projects.ProjectResponse'
+            $ref: '#/definitions/response.ProjectResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create project
@@ -617,14 +834,14 @@ paths:
       - application/json
       responses:
         "204":
-          description: ""
+          description: No Content
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Soft delete project
+      summary: Delete project
       tags:
       - Projects
     get:
@@ -640,11 +857,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectResponse'
+            $ref: '#/definitions/response.ProjectResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get project
@@ -671,11 +888,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectResponse'
+            $ref: '#/definitions/response.ProjectResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project
@@ -695,7 +912,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectAppsResponse'
+            $ref: '#/definitions/response.ProjectAppsResponse'
       security:
       - BearerAuth: []
       summary: List project apps
@@ -722,11 +939,11 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/projects.ProjectAppResponse'
+            $ref: '#/definitions/response.ProjectAppResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create project app
@@ -749,11 +966,11 @@ paths:
       - application/json
       responses:
         "204":
-          description: ""
+          description: No Content
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Soft delete project app
@@ -777,11 +994,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectAppResponse'
+            $ref: '#/definitions/response.ProjectAppResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get project app
@@ -813,14 +1030,43 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/projects.ProjectAppResponse'
+            $ref: '#/definitions/response.ProjectAppResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project app
+      tags:
+      - Project Apps
+  /v1/projects/{project_id}/apps/{app_id}/attestation-status:
+    get:
+      parameters:
+      - description: Project id
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.AppAttestationStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get project app attestation status
       tags:
       - Project Apps
   /v1/sessions/introspect:
@@ -840,15 +1086,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/phylax.IntrospectResponse'
+            $ref: '#/definitions/response.IntrospectResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/httpapi.ErrorResponse'
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Verify a Phylax session token
       tags:
       - Sessions

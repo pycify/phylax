@@ -69,7 +69,7 @@ func (r *Router) openapi(w http.ResponseWriter, req *http.Request) {
 //	@Summary	Service health
 //	@Tags		System
 //	@Produce	json
-//	@Success	200	{object}	response.APIResponse[httpapi.HealthResponse]
+//	@Success	200	{object}	response.HealthResponse
 //	@Router		/v1/health [get]
 func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, HealthResponse{
