@@ -56,10 +56,10 @@ type Verdict struct {
 }
 
 type CreateChallengeRequest struct {
-	AppID     string   `json:"app_id"`
-	Platform  Platform `json:"platform"`
-	Action    string   `json:"action"`
-	InstallID string   `json:"install_id"`
+	AppID     string   `json:"app_id" validate:"required"`
+	Platform  Platform `json:"platform" validate:"required,oneof=android apple firebase"`
+	Action    string   `json:"action" validate:"required"`
+	InstallID string   `json:"install_id" validate:"required"`
 	Subject   string   `json:"subject,omitempty"`
 }
 
@@ -73,10 +73,10 @@ type CreateChallengeResponse struct {
 }
 
 type VerifyAttestationRequest struct {
-	AppID       string         `json:"app_id"`
-	Platform    Platform       `json:"platform"`
-	ChallengeID string         `json:"challenge_id"`
-	InstallID   string         `json:"install_id"`
+	AppID       string         `json:"app_id" validate:"required"`
+	Platform    Platform       `json:"platform" validate:"required,oneof=android apple firebase"`
+	ChallengeID string         `json:"challenge_id" validate:"required"`
+	InstallID   string         `json:"install_id" validate:"required"`
 	Subject     string         `json:"subject,omitempty"`
 	Token       string         `json:"token,omitempty"`
 	KeyID       string         `json:"key_id,omitempty"`
@@ -91,7 +91,7 @@ type VerifyAttestationResponse struct {
 }
 
 type IntrospectRequest struct {
-	Token string `json:"token"`
+	Token string `json:"token" validate:"required"`
 }
 
 type IntrospectResponse struct {

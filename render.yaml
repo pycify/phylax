@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: phylax-staging
+    runtime: go
+    plan: starter
+    branch: staging
+    buildCommand: go build -o bin/phylax ./cmd/phylax && go build -o bin/phylax-migrate ./cmd/phylax-migrate && go build -o bin/phylax-seed ./cmd/phylax-seed
+    startCommand: ./bin/phylax
+    envVars:
+      - key: PHYLAX_ENV
+        value: staging
+      - key: PHYLAX_STORAGE_DRIVER
+        value: postgres
+      - key: PHYLAX_TOKEN_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: MAIL_DRIVER
+        value: smtp
+      - key: MAIL_FROM_NAME
+        value: Phylax
+      - key: MAIL_FROM_EMAIL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+        sync: false
+
+  - type: web
+    name: phylax-production
+    runtime: go
+    plan: starter
+    branch: main
+    buildCommand: go build -o bin/phylax ./cmd/phylax && go build -o bin/phylax-migrate ./cmd/phylax-migrate && go build -o bin/phylax-seed ./cmd/phylax-seed
+    startCommand: ./bin/phylax
+    envVars:
+      - key: PHYLAX_ENV
+        value: production
+      - key: PHYLAX_STORAGE_DRIVER
+        value: postgres
+      - key: PHYLAX_TOKEN_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: MAIL_DRIVER
+        value: smtp
+      - key: MAIL_FROM_NAME
+        value: Phylax
+      - key: MAIL_FROM_EMAIL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+        sync: false

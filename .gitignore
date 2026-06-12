@@ -1,0 +1,40 @@
+# Binaries and build output
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage output
+coverage.out
+*.coverprofile
+*.test
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local config overrides
+phylax.local.json
+configs/*.local.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# IDE/editor
+.idea/
+.vscode/
+.ite/
+*.swp
+*.swo
+.DS_Store

@@ -2,39 +2,87 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	"github.com/pycify/phylax/internal/app/controllers"
+	identityservice "github.com/pycify/phylax/internal/app/services/identity"
+	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	"github.com/pycify/phylax/internal/config"
+	"github.com/pycify/phylax/internal/env"
 	"github.com/pycify/phylax/internal/httpapi"
 	"github.com/pycify/phylax/internal/phylax"
 	"github.com/pycify/phylax/internal/store"
 )
 
+// @title			Phylax API
+// @version		0.1.0
+// @description	Server-side mobile app attestation for Android, Apple, and Firebase-backed clients.
+// @BasePath		/
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description					Type "Bearer " followed by a Phylax access token.
 func main() {
-	configPath := flag.String("config", "phylax.json", "Path to Phylax JSON config")
+	configPath := flag.String("config", "", "Path to Phylax JSON config")
+	envPath := flag.String("env-file", ".env", "Path to optional .env file")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	cfg, err := config.Load(*configPath)
+	if err := env.LoadFile(*envPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		logger.Error("failed to load env file", "error", err)
+		os.Exit(1)
+	}
+
+	path := resolveConfigPath(*configPath)
+	cfg, err := config.Load(path)
 	if err != nil {
 		logger.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
 
-	service, err := phylax.NewService(cfg, store.NewMemoryStore(), logger)
+	st, err := store.New(cfg.Storage)
+	if err != nil {
+		logger.Error("failed to create store", "error", err)
+		os.Exit(1)
+	}
+
+	service, err := phylax.NewService(cfg, st, logger)
 	if err != nil {
 		logger.Error("failed to create service", "error", err)
 		os.Exit(1)
 	}
 
-	handler := httpapi.NewRouter(service)
+	projectRepository, err := createProjectRepository(cfg)
+	if err != nil {
+		logger.Error("failed to create project repository", "error", err)
+		os.Exit(1)
+	}
+	projectService := projectservice.NewService(projectRepository)
+	projectController := controllers.NewProjectController(projectService)
+
+	authRepository, err := createAuthRepository(cfg)
+	if err != nil {
+		logger.Error("failed to create auth repository", "error", err)
+		os.Exit(1)
+	}
+	otpStore, err := createOTPStore(cfg)
+	if err != nil {
+		logger.Error("failed to create otp store", "error", err)
+		os.Exit(1)
+	}
+	authService := identityservice.NewAuthService(authRepository, otpStore, createMailer(cfg, logger))
+	authController := controllers.NewAuthController(authService)
+
+	handler := httpapi.NewRouter(service, authService, authController, projectController)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           handler,
@@ -61,4 +109,54 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("phylax stopped")
+}
+
+func resolveConfigPath(explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if value := os.Getenv("PHYLAX_CONFIG"); value != "" {
+		return value
+	}
+	envName := os.Getenv("PHYLAX_ENV")
+	if envName == "" {
+		envName = "development"
+	}
+	return filepath.Join("configs", "phylax."+envName+".json")
+}
+
+func createAuthRepository(cfg config.Config) (identityservice.AuthRepository, error) {
+	switch cfg.Storage.Driver {
+	case "", "memory":
+		return identityservice.NewMemoryAuthRepository(), nil
+	case "postgres":
+		return identityservice.NewGormAuthRepository(cfg.Storage.DatabaseURL)
+	default:
+		return nil, store.ErrUnsupportedDriver(cfg.Storage.Driver)
+	}
+}
+
+func createProjectRepository(cfg config.Config) (projectservice.Repository, error) {
+	switch cfg.Storage.Driver {
+	case "", "memory":
+		return projectservice.NewMemoryRepository(), nil
+	case "postgres":
+		return projectservice.NewGormRepository(cfg.Storage.DatabaseURL)
+	default:
+		return nil, store.ErrUnsupportedDriver(cfg.Storage.Driver)
+	}
+}
+
+func createOTPStore(cfg config.Config) (identityservice.OTPStore, error) {
+	if cfg.Redis.URL == "" {
+		return identityservice.NewMemoryOTPStore(), nil
+	}
+	return identityservice.NewRedisOTPStore(cfg.Redis.URL)
+}
+
+func createMailer(cfg config.Config, logger *slog.Logger) identityservice.Mailer {
+	if cfg.Mail.Driver == "smtp" {
+		return identityservice.NewSMTPMailer(cfg.Mail)
+	}
+	return identityservice.NewLogMailer(logger)
 }

@@ -228,6 +228,10 @@ func randomID(prefix string) string {
 	return prefix + "_" + randomNonce(18)
 }
 
+func RandomID(prefix string) string {
+	return randomID(prefix)
+}
+
 func randomNonce(size int) string {
 	buf := make([]byte, size)
 	if _, err := rand.Read(buf); err != nil {
