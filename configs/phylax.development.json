@@ -4,11 +4,11 @@
     "addr": ":8080"
   },
   "storage": {
-    "driver": "memory",
-    "database_url": ""
+    "driver": "postgres",
+    "database_url": "postgresql://postgres:postgres@127.0.0.1:5432/phylax?sslmode=disable"
   },
   "redis": {
-    "url": ""
+    "url": "redis://localhost:6379"
   },
   "mail": {
     "driver": "log",
@@ -33,7 +33,9 @@
         "package_name": "com.example.demo",
         "allow_mock_verification": true,
         "require_play_recognized": true,
-        "required_device_integrity": ["MEETS_DEVICE_INTEGRITY"]
+        "required_device_integrity": [
+          "MEETS_DEVICE_INTEGRITY"
+        ]
       },
       "apple": {
         "enabled": true,

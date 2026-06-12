@@ -10,7 +10,7 @@ import (
 	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
 	"github.com/pycify/phylax/internal/app/types/enum"
 	projectvalidators "github.com/pycify/phylax/internal/app/validators/projects"
-	"github.com/pycify/phylax/internal/phylax"
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -46,7 +46,7 @@ func NewService(repository Repository) *Service {
 func (s *Service) CreateProject(ctx context.Context, ownerUserID string, payload projectvalidators.CreateProjectRequest) (projectmodels.Project, error) {
 	now := time.Now().UTC()
 	project := projectmodels.Project{
-		ID:          phylax.RandomID("prj"),
+		ID:          uuid.NewString(),
 		OwnerUserID: ownerUserID,
 		Name:        strings.TrimSpace(payload.Name),
 		Slug:        strings.TrimSpace(payload.Slug),
@@ -102,7 +102,7 @@ func (s *Service) CreateApp(ctx context.Context, ownerUserID string, projectID s
 	}
 	now := time.Now().UTC()
 	app := projectmodels.ProjectApp{
-		ID:          phylax.RandomID("app"),
+		ID:          uuid.NewString(),
 		ProjectID:   projectID,
 		Name:        strings.TrimSpace(payload.Name),
 		Platform:    payload.Platform,

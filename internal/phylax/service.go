@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pycify/phylax/internal/config"
 )
 
@@ -108,7 +109,7 @@ func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeReques
 
 	now := time.Now().UTC()
 	challenge := Challenge{
-		ID:        randomID("chl"),
+		ID:        uuid.NewString(),
 		AppID:     req.AppID,
 		Platform:  req.Platform,
 		Action:    req.Action,
@@ -161,7 +162,7 @@ func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRe
 
 	now := time.Now().UTC()
 	session := AttestationSession{
-		ID:        randomID("ses"),
+		ID:        uuid.NewString(),
 		AppID:     req.AppID,
 		Platform:  req.Platform,
 		Action:    challenge.Action,
@@ -222,14 +223,6 @@ func ensurePlatformEnabled(app config.AppConfig, platform Platform) error {
 		return fmt.Errorf("platform %q is not supported", platform)
 	}
 	return nil
-}
-
-func randomID(prefix string) string {
-	return prefix + "_" + randomNonce(18)
-}
-
-func RandomID(prefix string) string {
-	return randomID(prefix)
 }
 
 func randomNonce(size int) string {

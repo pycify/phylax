@@ -1,5 +1,7 @@
+create extension if not exists "pgcrypto";
+
 create table if not exists phylax_challenges (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   app_id text not null,
   platform text not null,
   action text not null,
@@ -17,7 +19,7 @@ create index if not exists phylax_challenges_expires_at_idx
   on phylax_challenges (expires_at);
 
 create table if not exists phylax_sessions (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   app_id text not null,
   platform text not null,
   action text not null,
@@ -49,7 +51,7 @@ create index if not exists phylax_apple_keys_app_install_idx
   on phylax_apple_keys (app_id, install_id);
 
 create table if not exists phylax_verdict_logs (
-  id bigserial primary key,
+  id uuid primary key default gen_random_uuid(),
   app_id text not null,
   platform text not null,
   provider text not null,
@@ -62,4 +64,3 @@ create table if not exists phylax_verdict_logs (
 
 create index if not exists phylax_verdict_logs_app_created_idx
   on phylax_verdict_logs (app_id, created_at desc);
-

@@ -1,5 +1,7 @@
+create extension if not exists "pgcrypto";
+
 create table if not exists users (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   email text not null,
   full_name text not null default '',
   user_type text not null,
@@ -16,7 +18,7 @@ create index if not exists users_user_type_idx on users (user_type);
 create index if not exists users_deleted_at_idx on users (deleted_at);
 
 create table if not exists roles (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   name text not null unique,
   description text not null default '',
   created_at timestamptz not null,
@@ -25,14 +27,14 @@ create table if not exists roles (
 
 insert into roles (id, name, description, created_at, updated_at)
 values
-  ('role_super_admin', 'super_admin', 'Full platform administration access', now(), now()),
-  ('role_admin', 'admin', 'Platform administration access', now(), now()),
-  ('role_customer_service', 'customer_service', 'Customer support access', now(), now())
+  (gen_random_uuid(), 'super_admin', 'Full platform administration access', now(), now()),
+  (gen_random_uuid(), 'admin', 'Platform administration access', now(), now()),
+  (gen_random_uuid(), 'customer_service', 'Customer support access', now(), now())
 on conflict (name) do nothing;
 
 create table if not exists user_roles (
-  user_id text not null references users (id) on delete cascade,
-  role_id text not null references roles (id) on delete cascade,
+  user_id uuid not null references users (id) on delete cascade,
+  role_id uuid not null references roles (id) on delete cascade,
   created_at timestamptz not null,
   primary key (user_id, role_id)
 );
@@ -40,8 +42,8 @@ create table if not exists user_roles (
 create index if not exists user_roles_role_id_idx on user_roles (role_id);
 
 create table if not exists projects (
-  id text primary key,
-  owner_user_id text not null references users (id),
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null references users (id),
   name text not null,
   slug text not null unique,
   description text not null default '',
@@ -54,9 +56,9 @@ create index if not exists projects_owner_user_id_idx on projects (owner_user_id
 create index if not exists projects_deleted_at_idx on projects (deleted_at);
 
 create table if not exists project_members (
-  id text primary key,
-  project_id text not null references projects (id) on delete cascade,
-  user_id text not null references users (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  user_id uuid not null references users (id) on delete cascade,
   role text not null,
   status text not null,
   created_at timestamptz not null,
@@ -74,8 +76,8 @@ create index if not exists project_members_user_id_idx on project_members (user_
 create index if not exists project_members_deleted_at_idx on project_members (deleted_at);
 
 create table if not exists project_apps (
-  id text primary key,
-  project_id text not null references projects (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
   name text not null,
   platform text not null,
   provider text not null,
@@ -106,4 +108,3 @@ create unique index if not exists project_apps_ios_identifier_idx
 
 create index if not exists project_apps_project_id_idx on project_apps (project_id);
 create index if not exists project_apps_deleted_at_idx on project_apps (deleted_at);
-

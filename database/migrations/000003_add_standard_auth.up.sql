@@ -3,8 +3,8 @@ alter table users
   add column if not exists email_verified_at timestamptz;
 
 create table if not exists user_identities (
-  id text primary key,
-  user_id text not null references users (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users (id) on delete cascade,
   provider text not null,
   provider_user_id text not null,
   email text not null default '',
@@ -23,8 +23,8 @@ create index if not exists user_identities_user_id_idx on user_identities (user_
 create index if not exists user_identities_deleted_at_idx on user_identities (deleted_at);
 
 create table if not exists auth_access_tokens (
-  id text primary key,
-  user_id text not null references users (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users (id) on delete cascade,
   name text not null default '',
   hash text not null unique,
   abilities jsonb not null default '[]',
@@ -38,4 +38,3 @@ create table if not exists auth_access_tokens (
 create index if not exists auth_access_tokens_user_id_idx on auth_access_tokens (user_id);
 create index if not exists auth_access_tokens_revoked_at_idx on auth_access_tokens (revoked_at);
 create index if not exists auth_access_tokens_expires_at_idx on auth_access_tokens (expires_at);
-

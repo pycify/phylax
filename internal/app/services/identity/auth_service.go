@@ -15,7 +15,7 @@ import (
 	identitymodels "github.com/pycify/phylax/internal/app/models/identity"
 	"github.com/pycify/phylax/internal/app/types/enum"
 	identityvalidators "github.com/pycify/phylax/internal/app/validators/identity"
-	"github.com/pycify/phylax/internal/phylax"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -74,7 +74,7 @@ func (s *AuthService) CreateAccount(ctx context.Context, payload identityvalidat
 	}
 	now := time.Now().UTC()
 	user := identitymodels.User{
-		ID:           phylax.RandomID("usr"),
+		ID:           uuid.NewString(),
 		Email:        email,
 		FullName:     strings.TrimSpace(payload.FullName),
 		PasswordHash: string(passwordHash),
@@ -87,7 +87,7 @@ func (s *AuthService) CreateAccount(ctx context.Context, payload identityvalidat
 		return AccountCreated{}, err
 	}
 	identity := identitymodels.UserIdentity{
-		ID:             phylax.RandomID("idt"),
+		ID:             uuid.NewString(),
 		UserID:         user.ID,
 		Provider:       enum.AuthProviderStandard,
 		ProviderUserID: email,
@@ -189,7 +189,7 @@ func (s *AuthService) createAccessToken(ctx context.Context, userID string, name
 	plain := "phylax_" + randomString(36)
 	now := time.Now().UTC()
 	token := identitymodels.AuthAccessToken{
-		ID:        phylax.RandomID("tok"),
+		ID:        uuid.NewString(),
 		UserID:    userID,
 		Name:      name,
 		Hash:      hashToken(plain),
