@@ -6,38 +6,34 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator/v10"
 	_ "github.com/pycify/phylax/docs"
 	"github.com/pycify/phylax/internal/app/controllers"
 	approutes "github.com/pycify/phylax/internal/app/routes"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
 	"github.com/pycify/phylax/internal/app/types/response"
-	"github.com/pycify/phylax/internal/phylax"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Router struct {
-	service        *phylax.Service
-	router         chi.Router
-	validate       *validator.Validate
-	authService    *identityservice.AuthService
-	authController *controllers.AuthController
-	projects       *controllers.ProjectController
+	router                chi.Router
+	authService           *identityservice.AuthService
+	authController        *controllers.AuthController
+	projects              *controllers.ProjectController
+	attestationController *controllers.AttestationController
 }
 
 func NewRouter(
-	service *phylax.Service,
+	attestationController *controllers.AttestationController,
 	authService *identityservice.AuthService,
 	authController *controllers.AuthController,
 	projectController *controllers.ProjectController,
 ) http.Handler {
 	router := &Router{
-		service:        service,
-		router:         chi.NewRouter(),
-		validate:       validator.New(),
-		authService:    authService,
-		authController: authController,
-		projects:       projectController,
+		router:                chi.NewRouter(),
+		authService:           authService,
+		authController:        authController,
+		projects:              projectController,
+		attestationController: attestationController,
 	}
 	router.routes()
 	return router.router
@@ -48,12 +44,14 @@ func (r *Router) routes() {
 	r.router.Use(chimiddleware.RealIP)
 	r.router.Use(chimiddleware.Recoverer)
 
-	r.router.Get("/swagger/*", httpSwagger.WrapHandler)
+	r.router.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.PersistAuthorization(true),
+	))
 	r.router.Get("/v1/health", r.health)
 	r.router.Get("/v1/openapi.json", r.openapi)
-	r.router.Post("/v1/challenges", r.createChallenge)
-	r.router.Post("/v1/attestations/verify", r.verifyAttestation)
-	r.router.Post("/v1/sessions/introspect", r.introspect)
+	if r.attestationController != nil {
+		approutes.RegisterAttestationRoutes(r.router, r.attestationController)
+	}
 	if r.authController != nil && r.authService != nil {
 		approutes.RegisterAuthRoutes(r.router, r.authController, r.authService)
 	}
@@ -78,95 +76,6 @@ func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
 		OK:      true,
 		Service: "phylax",
 	})
-}
-
-// createChallenge godoc
-//
-//	@Summary	Create attestation challenge
-//	@Tags		Attestation
-//	@Accept		json
-//	@Produce	json
-//	@Param		payload	body		phylax.CreateChallengeRequest	true	"Challenge payload"
-//	@Success	201		{object}	response.APIResponse[phylax.CreateChallengeResponse]
-//	@Failure	400		{object}	response.ErrorResponse
-//	@Failure	422		{object}	response.ErrorResponse
-//	@Router		/v1/challenges [post]
-func (r *Router) createChallenge(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.CreateChallengeRequest
-	if err := readJSON(req, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := r.validate.Struct(payload); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	response, err := r.service.CreateChallenge(req.Context(), payload)
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusCreated, response)
-}
-
-// verifyAttestation godoc
-//
-//	@Summary	Verify provider proof and issue a Phylax token
-//	@Tags		Attestation
-//	@Accept		json
-//	@Produce	json
-//	@Param		payload	body		phylax.VerifyAttestationRequest	true	"Attestation payload"
-//	@Success	200		{object}	response.APIResponse[phylax.VerifyAttestationResponse]
-//	@Failure	400		{object}	response.ErrorResponse
-//	@Failure	422		{object}	response.ErrorResponse
-//	@Router		/v1/attestations/verify [post]
-func (r *Router) verifyAttestation(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.VerifyAttestationRequest
-	if err := readJSON(req, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := r.validate.Struct(payload); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-
-	response, err := r.service.VerifyAttestation(req.Context(), payload)
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, response)
-}
-
-// introspect godoc
-//
-//	@Summary	Verify a Phylax session token
-//	@Tags		Sessions
-//	@Accept		json
-//	@Produce	json
-//	@Param		payload	body		phylax.IntrospectRequest	true	"Token payload"
-//	@Success	200		{object}	response.APIResponse[phylax.IntrospectResponse]
-//	@Failure	400		{object}	response.ErrorResponse
-//	@Failure	422		{object}	response.ErrorResponse
-//	@Router		/v1/sessions/introspect [post]
-func (r *Router) introspect(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.IntrospectRequest
-	if err := readJSON(req, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := r.validate.Struct(payload); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, r.service.Introspect(req.Context(), payload.Token))
-}
-
-func readJSON(req *http.Request, out any) error {
-	defer req.Body.Close()
-	return json.NewDecoder(req.Body).Decode(out)
 }
 
 func writeJSON[T any](w http.ResponseWriter, status int, data T) {

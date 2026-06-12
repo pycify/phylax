@@ -79,6 +79,33 @@ func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 	require.True(t, errors.Is(err, ErrInvalidApp))
 }
 
+func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
+	service := NewService(NewMemoryRepository())
+	ctx := context.Background()
+
+	project, err := service.CreateProject(ctx, "user_1", projectvalidators.CreateProjectRequest{
+		Name: "Acme",
+		Slug: "acme",
+	})
+	require.NoError(t, err)
+	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Acme Android",
+		Platform:    enum.AppPlatformAndroid,
+		Provider:    enum.AppProviderPlayIntegrity,
+		Environment: enum.AppEnvironmentProduction,
+		PackageName: "com.acme.app",
+	})
+	require.NoError(t, err)
+
+	status, err := service.GetAppAttestationStatus(ctx, "user_1", project.ID, app.ID)
+	require.NoError(t, err)
+	require.True(t, status.Configured)
+	require.True(t, status.RequiresDeveloperCredentials)
+	require.Equal(t, "not_configured", status.ExternalConfigurationCheck)
+	require.Equal(t, "com.acme.app", status.Identifier)
+	require.Contains(t, status.NextSteps, "connect a Google Cloud or Play Console credential before Phylax can inspect Google-side configuration")
+}
+
 func TestProjectServiceSoftDeletesAppsThroughProjectDelete(t *testing.T) {
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()

@@ -852,4 +852,10 @@ paths:
       summary: Verify a Phylax session token
       tags:
       - Sessions
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer " followed by a Phylax access token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

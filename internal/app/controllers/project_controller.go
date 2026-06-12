@@ -135,7 +135,7 @@ func (c *ProjectController) UpdateProject(w http.ResponseWriter, req *http.Reque
 
 // DeleteProject godoc
 //
-//	@Summary	Soft delete project
+//	@Summary	Delete project
 //	@Tags		Projects
 //	@Produce	json
 //	@Security	BearerAuth
@@ -285,6 +285,32 @@ func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Re
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetProjectAppAttestationStatus godoc
+//
+//	@Summary	Get project app attestation status
+//	@Tags		Project Apps
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		project_id			path		string	true	"Project id"
+//	@Param		app_id				path		string	true	"App id"
+//	@Success	200					{object}	response.APIResponse[projects.AppAttestationStatusResponse]
+//	@Failure	404					{object}	response.ErrorResponse
+//	@Router		/v1/projects/{project_id}/apps/{app_id}/attestation-status [get]
+func (c *ProjectController) GetProjectAppAttestationStatus(w http.ResponseWriter, req *http.Request) {
+	userID, ok := requireUserID(w, req)
+	if !ok {
+		return
+	}
+	status, err := c.service.GetAppAttestationStatus(req.Context(), userID, chi.URLParam(req, "project_id"), chi.URLParam(req, "app_id"))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, projectdto.AppAttestationStatusResponse{
+		Status: projectdto.NewAppAttestationStatusDTO(*status),
+	})
 }
 
 func requireUserID(w http.ResponseWriter, req *http.Request) (string, bool) {

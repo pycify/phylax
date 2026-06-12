@@ -1,6 +1,8 @@
 COVER_PKGS := ./internal/app/models/identity ./internal/app/models/projects ./internal/app/services/identity ./internal/app/services/projects ./internal/config ./internal/env ./internal/httpapi ./internal/phylax ./internal/store
+AIR := $(shell command -v air 2>/dev/null)
+AIR_PACKAGE ?= github.com/air-verse/air@latest
 
-.PHONY: build coverage fmt migrate-down migrate-up seed run swagger test watch
+.PHONY: air build coverage fmt migrate-down migrate-up seed run swagger test watch
 
 build:
 	go build -o bin/phylax ./cmd/phylax
@@ -24,7 +26,13 @@ run:
 	PHYLAX_ENV=development go run ./cmd/phylax
 
 watch:
-	air
+ifdef AIR
+	$(AIR)
+else
+	go run $(AIR_PACKAGE)
+endif
+
+air: watch
 
 migrate-up:
 	go run ./cmd/phylax-migrate -direction up

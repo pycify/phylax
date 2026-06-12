@@ -4,6 +4,7 @@ import (
 	"time"
 
 	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
+	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	"github.com/pycify/phylax/internal/app/types/enum"
 )
 
@@ -73,4 +74,36 @@ type ProjectAppResponse struct {
 
 type ProjectAppsResponse struct {
 	Apps []ProjectAppDTO `json:"apps"`
+}
+
+type AppAttestationStatusDTO struct {
+	AppID                        string           `json:"app_id"`
+	Platform                     enum.AppPlatform `json:"platform"`
+	Provider                     enum.AppProvider `json:"provider"`
+	Enabled                      bool             `json:"enabled"`
+	Configured                   bool             `json:"configured"`
+	Identifier                   string           `json:"identifier"`
+	ExternalConfigurationCheck   string           `json:"external_configuration_check"`
+	RequiresDeveloperCredentials bool             `json:"requires_developer_credentials"`
+	Issues                       []string         `json:"issues,omitempty"`
+	NextSteps                    []string         `json:"next_steps,omitempty"`
+}
+
+func NewAppAttestationStatusDTO(status projectservice.AppAttestationStatus) AppAttestationStatusDTO {
+	return AppAttestationStatusDTO{
+		AppID:                        status.AppID,
+		Platform:                     status.Platform,
+		Provider:                     status.Provider,
+		Enabled:                      status.Enabled,
+		Configured:                   status.Configured,
+		Identifier:                   status.Identifier,
+		ExternalConfigurationCheck:   status.ExternalConfigurationCheck,
+		RequiresDeveloperCredentials: status.RequiresDeveloperCredentials,
+		Issues:                       status.Issues,
+		NextSteps:                    status.NextSteps,
+	}
+}
+
+type AppAttestationStatusResponse struct {
+	Status AppAttestationStatusDTO `json:"status"`
 }

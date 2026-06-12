@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/pycify/phylax/internal/app/controllers"
+	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
 	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	"github.com/pycify/phylax/internal/config"
@@ -60,6 +61,7 @@ func main() {
 		logger.Error("failed to create service", "error", err)
 		os.Exit(1)
 	}
+	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
 
 	projectRepository, err := createProjectRepository(cfg)
 	if err != nil {
@@ -82,7 +84,7 @@ func main() {
 	authService := identityservice.NewAuthService(authRepository, otpStore, createMailer(cfg, logger))
 	authController := controllers.NewAuthController(authService)
 
-	handler := httpapi.NewRouter(service, authService, authController, projectController)
+	handler := httpapi.NewRouter(attestationController, authService, authController, projectController)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           handler,

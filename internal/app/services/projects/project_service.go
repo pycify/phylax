@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
 	"github.com/pycify/phylax/internal/app/types/enum"
 	projectvalidators "github.com/pycify/phylax/internal/app/validators/projects"
-	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -172,6 +172,91 @@ func (s *Service) DeleteApp(ctx context.Context, ownerUserID string, projectID s
 		return err
 	}
 	return s.repository.DeleteApp(ctx, projectID, appID)
+}
+
+type AppAttestationStatus struct {
+	AppID                        string
+	Platform                     enum.AppPlatform
+	Provider                     enum.AppProvider
+	Enabled                      bool
+	Configured                   bool
+	Identifier                   string
+	ExternalConfigurationCheck   string
+	RequiresDeveloperCredentials bool
+	Issues                       []string
+	NextSteps                    []string
+}
+
+func (s *Service) GetAppAttestationStatus(ctx context.Context, ownerUserID string, projectID string, appID string) (*AppAttestationStatus, error) {
+	if _, err := s.repository.FindProject(ctx, ownerUserID, projectID); err != nil {
+		return nil, err
+	}
+	app, err := s.repository.FindApp(ctx, projectID, appID)
+	if err != nil {
+		return nil, err
+	}
+
+	status := appAttestationStatus(*app)
+	return &status, nil
+}
+
+func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
+	status := AppAttestationStatus{
+		AppID:                        app.ID,
+		Platform:                     app.Platform,
+		Provider:                     app.Provider,
+		Enabled:                      app.Enabled,
+		RequiresDeveloperCredentials: true,
+		ExternalConfigurationCheck:    "not_configured",
+	}
+
+	if !app.Enabled {
+		status.Issues = append(status.Issues, "app is disabled in Phylax")
+	}
+
+	switch app.Provider {
+	case enum.AppProviderPlayIntegrity:
+		status.Identifier = strings.TrimSpace(app.PackageName)
+		if app.Platform != enum.AppPlatformAndroid {
+			status.Issues = append(status.Issues, "Play Integrity requires an Android app")
+		}
+		if status.Identifier == "" {
+			status.Issues = append(status.Issues, "package_name is required for Play Integrity")
+		}
+		status.NextSteps = append(status.NextSteps,
+			"verify Play Integrity tokens on the server and compare requestDetails.requestPackageName with package_name",
+			"connect a Google Cloud or Play Console credential before Phylax can inspect Google-side configuration",
+		)
+	case enum.AppProviderAppAttest:
+		status.Identifier = strings.TrimSpace(app.BundleID)
+		if app.Platform != enum.AppPlatformIOS {
+			status.Issues = append(status.Issues, "App Attest requires an iOS app")
+		}
+		if status.Identifier == "" {
+			status.Issues = append(status.Issues, "bundle_id is required for App Attest")
+		}
+		status.NextSteps = append(status.NextSteps,
+			"collect App Attest key attestations and assertions from the client",
+			"configure Apple team_id so Phylax can validate the App Attest app identifier",
+		)
+	case enum.AppProviderFirebase:
+		status.Identifier = strings.TrimSpace(app.PackageName)
+		if status.Identifier == "" {
+			status.Identifier = strings.TrimSpace(app.BundleID)
+		}
+		if status.Identifier == "" {
+			status.Issues = append(status.Issues, "package_name or bundle_id is required for Firebase App Check")
+		}
+		status.NextSteps = append(status.NextSteps,
+			"verify Firebase App Check tokens on the backend",
+			"connect Firebase project/app credentials before Phylax can inspect App Check provider configuration",
+		)
+	default:
+		status.Issues = append(status.Issues, "unsupported attestation provider")
+	}
+
+	status.Configured = app.Enabled && status.Identifier != "" && len(status.Issues) == 0
+	return status
 }
 
 func validateAppIdentifiers(platform enum.AppPlatform, packageName string, bundleID string) error {

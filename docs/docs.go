@@ -740,6 +740,14 @@ const docTemplate = `{
             }
         }
     },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer \" followed by a Phylax access token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
     "definitions": {
         "httpapi.ErrorResponse": {
             "type": "object",

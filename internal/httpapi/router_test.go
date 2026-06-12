@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/pycify/phylax/internal/app/controllers"
+	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
 	"github.com/pycify/phylax/internal/config"
 	"github.com/pycify/phylax/internal/phylax"
 	"github.com/pycify/phylax/internal/store"
@@ -126,5 +128,6 @@ func newTestRouter(t *testing.T) http.Handler {
 	}, store.NewMemoryStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	require.NoError(t, err)
 	_ = context.Background()
-	return NewRouter(service, nil, nil, nil)
+	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
+	return NewRouter(attestationController, nil, nil, nil)
 }
