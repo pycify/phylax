@@ -132,6 +132,8 @@ func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRe
 		return VerifyAttestationResponse{}, err
 	}
 
+	fmt.Printf("Attestation verification Verdict: %+v\n", verdict)
+
 	now := time.Now().UTC()
 	session := AttestationSession{
 		ID:        uuid.NewString(),
