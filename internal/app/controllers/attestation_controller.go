@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/pycify/phylax/internal/app/helper"
 	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
@@ -49,16 +50,18 @@ func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http
 //	@Tags		Attestation
 //	@Accept		json
 //	@Produce	json
+//	@Param		app_id	path		string							true	"App id"
 //	@Param		payload	body		phylax.VerifyAttestationRequest	true	"Attestation payload"
 //	@Success	200		{object}	response.VerifyAttestationResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
-//	@Router		/v1/attestations/verify [post]
+//	@Router		/v1/apps/{app_id}/attestations/verify [post]
 func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.VerifyAttestationRequest
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
+	payload.AppID = chi.URLParam(req, "app_id")
 
 	response, err := c.service.VerifyAttestation(req.Context(), payload)
 	if err != nil {

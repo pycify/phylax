@@ -73,8 +73,8 @@ type CreateChallengeResponse struct {
 }
 
 type VerifyAttestationRequest struct {
-	AppID       string         `json:"app_id" validate:"required"`
-	Platform    Platform       `json:"platform" validate:"required,oneof=android apple firebase"`
+	AppID       string         `json:"-"`
+	Platform    Platform       `json:"-"`
 	ChallengeID string         `json:"challenge_id" validate:"required"`
 	InstallID   string         `json:"install_id" validate:"required"`
 	Subject     string         `json:"subject,omitempty"`

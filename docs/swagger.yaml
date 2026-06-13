@@ -226,21 +226,12 @@ definitions:
     type: object
   phylax.VerifyAttestationRequest:
     properties:
-      app_id:
-        type: string
       challenge_id:
         type: string
       install_id:
         type: string
       key_id:
         type: string
-      platform:
-        allOf:
-        - $ref: '#/definitions/phylax.Platform'
-        enum:
-        - android
-        - apple
-        - firebase
       proof:
         additionalProperties: {}
         type: object
@@ -249,10 +240,8 @@ definitions:
       token:
         type: string
     required:
-    - app_id
     - challenge_id
     - install_id
-    - platform
     type: object
   phylax.VerifyAttestationResponse:
     properties:
@@ -710,35 +699,16 @@ paths:
       summary: Update project app
       tags:
       - Project Apps
-  /v1/apps/{app_id}/steps:
-    get:
+  /v1/apps/{app_id}/attestations/verify:
+    post:
+      consumes:
+      - application/json
       parameters:
       - description: App id
         in: path
         name: app_id
         required: true
         type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.AppAttestationStatusResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get project app steps
-      tags:
-      - Project Apps
-  /v1/attestations/verify:
-    post:
-      consumes:
-      - application/json
-      parameters:
       - description: Attestation payload
         in: body
         name: payload
@@ -763,6 +733,30 @@ paths:
       summary: Verify provider proof and issue a Phylax token
       tags:
       - Attestation
+  /v1/apps/{app_id}/steps:
+    get:
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.AppAttestationStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get project app steps
+      tags:
+      - Project Apps
   /v1/auth/accounts:
     post:
       consumes:

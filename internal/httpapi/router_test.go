@@ -41,9 +41,7 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 		"install_id": "install_123",
 	}, http.StatusCreated)
 
-	verified := postJSONEnvelope[phylax.VerifyAttestationResponse](t, server.URL+"/v1/attestations/verify", map[string]any{
-		"app_id":       "demo",
-		"platform":     "android",
+	verified := postJSONEnvelope[phylax.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/verify", map[string]any{
 		"challenge_id": challenge.ChallengeID,
 		"install_id":   "install_123",
 		"token":        "mock",

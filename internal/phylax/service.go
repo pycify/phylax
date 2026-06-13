@@ -92,7 +92,14 @@ func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeReques
 }
 
 func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRequest) (VerifyAttestationResponse, error) {
+	if req.AppID == "" || req.ChallengeID == "" || req.InstallID == "" {
+		return VerifyAttestationResponse{}, errors.New("app_id, challenge_id, and install_id are required")
+	}
 	app, err := s.resolveApp(ctx, req.AppID)
+	if err != nil {
+		return VerifyAttestationResponse{}, err
+	}
+	req.Platform, err = inferPlatform(app)
 	if err != nil {
 		return VerifyAttestationResponse{}, err
 	}
@@ -158,6 +165,19 @@ func (s *Service) resolveApp(ctx context.Context, appID string) (config.AppConfi
 		return config.AppConfig{}, err
 	}
 	return app, nil
+}
+
+func inferPlatform(app config.AppConfig) (Platform, error) {
+	if app.Firebase.Enabled {
+		return PlatformFirebase, nil
+	}
+	if app.Android.Enabled {
+		return PlatformAndroid, nil
+	}
+	if app.Apple.Enabled {
+		return PlatformApple, nil
+	}
+	return "", fmt.Errorf("app %q has no enabled attestation provider", app.ID)
 }
 
 func (s *Service) Introspect(ctx context.Context, token string) IntrospectResponse {

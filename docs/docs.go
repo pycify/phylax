@@ -137,6 +137,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/apps/{app_id}/attestations/verify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attestation"
+                ],
+                "summary": "Verify provider proof and issue a Phylax token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "app_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Attestation payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/phylax.VerifyAttestationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.VerifyAttestationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/apps/{app_id}/steps": {
             "get": {
                 "security": [
@@ -169,51 +221,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/attestations/verify": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Attestation"
-                ],
-                "summary": "Verify provider proof and issue a Phylax token",
-                "parameters": [
-                    {
-                        "description": "Attestation payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/phylax.VerifyAttestationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.VerifyAttestationResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -1088,15 +1095,10 @@ const docTemplate = `{
         "phylax.VerifyAttestationRequest": {
             "type": "object",
             "required": [
-                "app_id",
                 "challenge_id",
-                "install_id",
-                "platform"
+                "install_id"
             ],
             "properties": {
-                "app_id": {
-                    "type": "string"
-                },
                 "challenge_id": {
                     "type": "string"
                 },
@@ -1105,18 +1107,6 @@ const docTemplate = `{
                 },
                 "key_id": {
                     "type": "string"
-                },
-                "platform": {
-                    "enum": [
-                        "android",
-                        "apple",
-                        "firebase"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/phylax.Platform"
-                        }
-                    ]
                 },
                 "proof": {
                     "type": "object",

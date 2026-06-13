@@ -28,7 +28,6 @@ func TestServiceCreatesChallengeAndVerifiesMockAndroidAttestation(t *testing.T) 
 
 	verification, err := service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
 		AppID:       "demo",
-		Platform:    PlatformAndroid,
 		ChallengeID: challenge.ChallengeID,
 		InstallID:   "install_123",
 		Subject:     "user_123",
@@ -63,7 +62,6 @@ func TestServiceRejectsReusedChallenge(t *testing.T) {
 	}
 	request := VerifyAttestationRequest{
 		AppID:       "demo",
-		Platform:    PlatformAndroid,
 		ChallengeID: challenge.ChallengeID,
 		InstallID:   "install_123",
 		Token:       "mock",
@@ -90,7 +88,6 @@ func TestServiceVerifiesPlayIntegrityVerdict(t *testing.T) {
 
 	verification, err := service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
 		AppID:       "demo",
-		Platform:    PlatformAndroid,
 		ChallengeID: challenge.ChallengeID,
 		InstallID:   "install_123",
 		Token:       challenge.Nonce,
@@ -120,7 +117,6 @@ func TestServiceRejectsPlayIntegrityPackageMismatch(t *testing.T) {
 
 	_, err = service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
 		AppID:       "demo",
-		Platform:    PlatformAndroid,
 		ChallengeID: challenge.ChallengeID,
 		InstallID:   "install_123",
 		Token:       challenge.Nonce,
