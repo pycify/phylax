@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -239,6 +240,17 @@ type AppAttestationStatus struct {
 	RequiresDeveloperCredentials bool
 	Issues                       []string
 	NextSteps                    []string
+	SetupSteps                   []AppSetupStep
+}
+
+type AppSetupStep struct {
+	Key                string
+	Title              string
+	Status             string
+	VerificationMethod string
+	Details            string
+	Action             string
+	DocsURL            string
 }
 
 func (s *Service) GetAppAttestationStatus(ctx context.Context, ownerUserID string, appID string) (*AppAttestationStatus, error) {
@@ -268,46 +280,236 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 	switch app.Provider {
 	case enum.AppProviderPlayIntegrity:
 		status.Identifier = strings.TrimSpace(app.PackageName)
+		status.SetupSteps = androidPlayIntegritySetupSteps(status.Identifier)
 		if app.Platform != enum.AppPlatformAndroid {
 			status.Issues = append(status.Issues, "Play Integrity requires an Android app")
 		}
 		if status.Identifier == "" {
 			status.Issues = append(status.Issues, "package_name is required for Play Integrity")
 		}
-		status.NextSteps = append(status.NextSteps,
-			"verify Play Integrity tokens on the server and compare requestDetails.requestPackageName with package_name",
-			"connect a Google Cloud or Play Console credential before Phylax can inspect Google-side configuration",
-		)
 	case enum.AppProviderAppAttest:
 		status.Identifier = strings.TrimSpace(app.BundleID)
+		status.SetupSteps = appleAppAttestSetupSteps(status.Identifier)
 		if app.Platform != enum.AppPlatformIOS {
 			status.Issues = append(status.Issues, "App Attest requires an iOS app")
 		}
 		if status.Identifier == "" {
 			status.Issues = append(status.Issues, "bundle_id is required for App Attest")
 		}
-		status.NextSteps = append(status.NextSteps,
-			"collect App Attest key attestations and assertions from the client",
-			"configure Apple team_id so Phylax can validate the App Attest app identifier",
-		)
 	case enum.AppProviderFirebase:
 		status.Identifier = strings.TrimSpace(app.PackageName)
 		if status.Identifier == "" {
 			status.Identifier = strings.TrimSpace(app.BundleID)
 		}
+		status.SetupSteps = firebaseAppCheckSetupSteps(status.Identifier)
 		if status.Identifier == "" {
 			status.Issues = append(status.Issues, "package_name or bundle_id is required for Firebase App Check")
 		}
-		status.NextSteps = append(status.NextSteps,
-			"verify Firebase App Check tokens on the backend",
-			"connect Firebase project/app credentials before Phylax can inspect App Check provider configuration",
-		)
 	default:
 		status.Issues = append(status.Issues, "unsupported attestation provider")
 	}
 
+	status.ExternalConfigurationCheck = externalConfigurationCheck(status.SetupSteps)
+	status.NextSteps = nextSetupSteps(status.SetupSteps)
 	status.Configured = app.Enabled && status.Identifier != "" && len(status.Issues) == 0
 	return status
+}
+
+func androidPlayIntegritySetupSteps(packageName string) []AppSetupStep {
+	credentialStatus := "pending"
+	credentialDetails := "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not set on the Phylax backend."
+	if strings.TrimSpace(os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")) != "" {
+		credentialStatus = "completed"
+		credentialDetails = "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend."
+	}
+
+	identifierStatus := "completed"
+	identifierDetails := "Android package name is present on the Phylax app record."
+	if strings.TrimSpace(packageName) == "" {
+		identifierStatus = "pending"
+		identifierDetails = "Add the Android package name to this Phylax app."
+	}
+
+	return []AppSetupStep{
+		{
+			Key:                "phylax_app_record",
+			Title:              "Create the Android app in Phylax",
+			Status:             "completed",
+			VerificationMethod: "database",
+			Details:            "This app record exists in Phylax.",
+		},
+		{
+			Key:                "android_package_name",
+			Title:              "Configure Android package name",
+			Status:             identifierStatus,
+			VerificationMethod: "database",
+			Details:            identifierDetails,
+			Action:             "Set package_name to the app id used by Google Play.",
+		},
+		{
+			Key:                "google_cloud_project",
+			Title:              "Create or select a Google Cloud project",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "Google requires a Cloud project for Play Integrity. Phylax cannot infer this from the package name alone.",
+			Action:             "Use the Cloud project that will own Play Integrity API access and service account credentials.",
+			DocsURL:            "https://developer.android.com/google/play/integrity/setup",
+		},
+		{
+			Key:                "play_integrity_api_enabled",
+			Title:              "Enable Play Integrity API",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "Phylax can use this during token verification, but this setup endpoint does not call Google without an integrity token.",
+			Action:             "Enable Play Integrity API in Google Cloud, or link the Cloud project from Play Console.",
+			DocsURL:            "https://developer.android.com/google/play/integrity/setup",
+		},
+		{
+			Key:                "play_console_linked",
+			Title:              "Link the Cloud project in Google Play Console",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "Google Play Console linking is not exposed to Phylax through the package name. The developer must confirm this step.",
+			Action:             "In Play Console, open the app, go to Protected with Play, then link the Cloud project under Play Integrity API.",
+			DocsURL:            "https://developer.android.com/google/play/integrity/setup",
+		},
+		{
+			Key:                "service_account_credentials",
+			Title:              "Configure backend service account credentials",
+			Status:             credentialStatus,
+			VerificationMethod: "environment",
+			Details:            credentialDetails,
+			Action:             "Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON to the service account JSON for the linked Cloud project.",
+		},
+		{
+			Key:                "android_client_token_flow",
+			Title:              "Integrate Play Integrity token requests in the Android app",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "The client must request a Play Integrity token and send it to Phylax during attestation verification.",
+			Action:             "Use the challenge nonce from Phylax as the Play Integrity nonce or request hash.",
+			DocsURL:            "https://developer.android.com/google/play/integrity/standard",
+		},
+	}
+}
+
+func appleAppAttestSetupSteps(bundleID string) []AppSetupStep {
+	identifierStatus := "completed"
+	identifierDetails := "iOS bundle id is present on the Phylax app record."
+	if strings.TrimSpace(bundleID) == "" {
+		identifierStatus = "pending"
+		identifierDetails = "Add the iOS bundle id to this Phylax app."
+	}
+
+	return []AppSetupStep{
+		{
+			Key:                "phylax_app_record",
+			Title:              "Create the iOS app in Phylax",
+			Status:             "completed",
+			VerificationMethod: "database",
+			Details:            "This app record exists in Phylax.",
+		},
+		{
+			Key:                "ios_bundle_id",
+			Title:              "Configure iOS bundle id",
+			Status:             identifierStatus,
+			VerificationMethod: "database",
+			Details:            identifierDetails,
+			Action:             "Set bundle_id to the app bundle identifier used in Apple Developer.",
+		},
+		{
+			Key:                "apple_app_attest_capability",
+			Title:              "Enable App Attest capability in Apple Developer",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "Apple does not provide Phylax a simple public status check from bundle id alone.",
+			Action:             "Enable App Attest on the app identifier in Apple Developer and add the entitlement to the iOS app.",
+			DocsURL:            "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity",
+		},
+		{
+			Key:                "apple_team_id",
+			Title:              "Configure Apple team id",
+			Status:             "pending",
+			VerificationMethod: "database",
+			Details:            "Phylax does not yet store team_id on project apps, so server-side App Attest validation cannot be fully configured.",
+			Action:             "Add team_id support to Phylax app settings, then save the developer's Apple team id.",
+		},
+		{
+			Key:                "ios_client_key_flow",
+			Title:              "Integrate App Attest key and assertion flow in the iOS app",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "The client must create an App Attest key, attest it, then produce assertions for protected requests.",
+			Action:             "Send key attestations and assertions to Phylax once the App Attest verifier is implemented.",
+			DocsURL:            "https://developer.apple.com/documentation/devicecheck/establishing-your-app-s-integrity",
+		},
+	}
+}
+
+func firebaseAppCheckSetupSteps(identifier string) []AppSetupStep {
+	identifierStatus := "completed"
+	identifierDetails := "App identifier is present on the Phylax app record."
+	if strings.TrimSpace(identifier) == "" {
+		identifierStatus = "pending"
+		identifierDetails = "Add package_name for Android or bundle_id for iOS."
+	}
+
+	return []AppSetupStep{
+		{
+			Key:                "phylax_app_record",
+			Title:              "Create the app in Phylax",
+			Status:             "completed",
+			VerificationMethod: "database",
+			Details:            "This app record exists in Phylax.",
+		},
+		{
+			Key:                "app_identifier",
+			Title:              "Configure app identifier",
+			Status:             identifierStatus,
+			VerificationMethod: "database",
+			Details:            identifierDetails,
+		},
+		{
+			Key:                "firebase_app_check_provider",
+			Title:              "Enable Firebase App Check provider",
+			Status:             "manual",
+			VerificationMethod: "manual",
+			Details:            "Phylax needs Firebase project/app credentials before it can inspect provider setup.",
+			Action:             "Enable the matching App Check provider in Firebase Console.",
+			DocsURL:            "https://firebase.google.com/docs/app-check",
+		},
+	}
+}
+
+func externalConfigurationCheck(steps []AppSetupStep) string {
+	hasManual := false
+	for _, step := range steps {
+		switch step.Status {
+		case "pending", "blocked":
+			return "pending"
+		case "manual":
+			hasManual = true
+		}
+	}
+	if hasManual {
+		return "manual_verification_required"
+	}
+	return "verified"
+}
+
+func nextSetupSteps(steps []AppSetupStep) []string {
+	next := []string{}
+	for _, step := range steps {
+		if step.Status == "completed" {
+			continue
+		}
+		if step.Action != "" {
+			next = append(next, step.Action)
+			continue
+		}
+		next = append(next, step.Title)
+	}
+	return next
 }
 
 func validateAppIdentifiers(platform enum.AppPlatform, packageName string, bundleID string) error {

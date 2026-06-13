@@ -25,6 +25,6 @@ func RegisterProjectRoutes(router chi.Router, controller *controllers.ProjectCon
 		router.Get("/{app_id}", controller.GetProjectApp)
 		router.Patch("/{app_id}", controller.UpdateProjectApp)
 		router.Delete("/{app_id}", controller.DeleteProjectApp)
-		router.Get("/{app_id}/attestation-status", controller.GetProjectAppAttestationStatus)
+		router.Get("/{app_id}/steps", controller.GetProjectAppAttestationStatus)
 	})
 }

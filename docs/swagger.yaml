@@ -291,11 +291,32 @@ definitions:
         $ref: '#/definitions/enum.AppProvider'
       requires_developer_credentials:
         type: boolean
+      setup_steps:
+        items:
+          $ref: '#/definitions/projects.AppSetupStepDTO'
+        type: array
     type: object
   projects.AppAttestationStatusResponse:
     properties:
       status:
         $ref: '#/definitions/projects.AppAttestationStatusDTO'
+    type: object
+  projects.AppSetupStepDTO:
+    properties:
+      action:
+        type: string
+      details:
+        type: string
+      docs_url:
+        type: string
+      key:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      verification_method:
+        type: string
     type: object
   projects.CreateProjectAppRequest:
     properties:
@@ -632,7 +653,7 @@ paths:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Soft delete project app
+      summary: Delete project app
       tags:
       - Project Apps
     get:
@@ -689,7 +710,7 @@ paths:
       summary: Update project app
       tags:
       - Project Apps
-  /v1/apps/{app_id}/attestation-status:
+  /v1/apps/{app_id}/steps:
     get:
       parameters:
       - description: App id
@@ -710,7 +731,7 @@ paths:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get project app attestation status
+      summary: Get project app steps
       tags:
       - Project Apps
   /v1/attestations/verify:

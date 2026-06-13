@@ -261,7 +261,7 @@ func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Re
 
 // DeleteProjectApp godoc
 //
-//	@Summary	Soft delete project app
+//	@Summary	Delete project app
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
@@ -283,14 +283,14 @@ func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Re
 
 // GetProjectAppAttestationStatus godoc
 //
-//	@Summary	Get project app attestation status
+//	@Summary	Get project app steps
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		app_id				path		string	true	"App id"
 //	@Success	200					{object}	response.AppAttestationStatusResponse
 //	@Failure	404					{object}	response.ErrorResponse
-//	@Router		/v1/apps/{app_id}/attestation-status [get]
+//	@Router		/v1/apps/{app_id}/steps [get]
 func (c *ProjectController) GetProjectAppAttestationStatus(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {

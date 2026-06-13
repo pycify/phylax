@@ -106,6 +106,7 @@ func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 }
 
 func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
+	t.Setenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", `{"type":"service_account"}`)
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()
 
@@ -127,9 +128,17 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, status.Configured)
 	require.True(t, status.RequiresDeveloperCredentials)
-	require.Equal(t, "not_configured", status.ExternalConfigurationCheck)
+	require.Equal(t, "manual_verification_required", status.ExternalConfigurationCheck)
 	require.Equal(t, "com.acme.app", status.Identifier)
-	require.Contains(t, status.NextSteps, "connect a Google Cloud or Play Console credential before Phylax can inspect Google-side configuration")
+	require.Contains(t, status.NextSteps, "In Play Console, open the app, go to Protected with Play, then link the Cloud project under Play Integrity API.")
+	require.Contains(t, status.SetupSteps, AppSetupStep{
+		Key:                "service_account_credentials",
+		Title:              "Configure backend service account credentials",
+		Status:             "completed",
+		VerificationMethod: "environment",
+		Details:            "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend.",
+		Action:             "Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON to the service account JSON for the linked Cloud project.",
+	})
 }
 
 func TestProjectServiceResolvesAppConfigForAttestation(t *testing.T) {

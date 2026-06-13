@@ -13,7 +13,7 @@ tmp_dir = "tmp"
   exclude_unchanged = false
   follow_symlink = false
   full_bin = "PHYLAX_ENV=development ./tmp/main"
-  include_dir = ["cmd", "internal", "configs"]
+  include_dir = ["cmd", "internal", "configs", "docs"]
   include_ext = ["go", "json"]
   include_file = []
   kill_delay = "0s"

@@ -65,7 +65,7 @@ const docTemplate = `{
                 "tags": [
                     "Project Apps"
                 ],
-                "summary": "Soft delete project app",
+                "summary": "Delete project app",
                 "parameters": [
                     {
                         "type": "string",
@@ -137,7 +137,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/apps/{app_id}/attestation-status": {
+        "/v1/apps/{app_id}/steps": {
             "get": {
                 "security": [
                     {
@@ -150,7 +150,7 @@ const docTemplate = `{
                 "tags": [
                     "Project Apps"
                 ],
-                "summary": "Get project app attestation status",
+                "summary": "Get project app steps",
                 "parameters": [
                     {
                         "type": "string",
@@ -1185,6 +1185,12 @@ const docTemplate = `{
                 },
                 "requires_developer_credentials": {
                     "type": "boolean"
+                },
+                "setup_steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/projects.AppSetupStepDTO"
+                    }
                 }
             }
         },
@@ -1193,6 +1199,32 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "$ref": "#/definitions/projects.AppAttestationStatusDTO"
+                }
+            }
+        },
+        "projects.AppSetupStepDTO": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "docs_url": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "verification_method": {
+                    "type": "string"
                 }
             }
         },
