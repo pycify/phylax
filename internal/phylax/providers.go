@@ -4,12 +4,54 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pycify/phylax/internal/config"
+	"google.golang.org/api/option"
+	"google.golang.org/api/playintegrity/v1"
 )
 
-type AndroidProvider struct{}
+type PlayIntegrityVerifier interface {
+	Decode(ctx context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error)
+}
+
+type GooglePlayIntegrityVerifier struct{}
+
+func (GooglePlayIntegrityVerifier) Decode(ctx context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error) {
+	if app.Android.ServiceAccountJSONEnv == "" {
+		return nil, errors.New("android.service_account_json_env is required for Play Integrity verification")
+	}
+	credentialsJSON := strings.TrimSpace(os.Getenv(app.Android.ServiceAccountJSONEnv))
+	if credentialsJSON == "" {
+		return nil, fmt.Errorf("service account env %q is not set", app.Android.ServiceAccountJSONEnv)
+	}
+
+	service, err := playintegrity.NewService(ctx,
+		option.WithCredentialsJSON([]byte(credentialsJSON)),
+		option.WithScopes(playintegrity.PlayintegrityScope),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := service.V1.DecodeIntegrityToken(app.Android.PackageName, &playintegrity.DecodeIntegrityTokenRequest{
+		IntegrityToken: integrityToken,
+	}).Context(ctx).Do()
+	if err != nil {
+		return nil, err
+	}
+	if response == nil || response.TokenPayloadExternal == nil {
+		return nil, errors.New("play integrity response did not include a token payload")
+	}
+	return response.TokenPayloadExternal, nil
+}
+
+type AndroidProvider struct {
+	verifier PlayIntegrityVerifier
+}
 
 func (AndroidProvider) Platform() Platform { return PlatformAndroid }
 func (AndroidProvider) Name() string       { return "play_integrity" }
@@ -17,7 +59,7 @@ func (AndroidProvider) Status() ProviderStatus {
 	return ProviderStatus{Platform: string(PlatformAndroid), Provider: "play_integrity"}
 }
 
-func (AndroidProvider) Verify(_ context.Context, app config.AppConfig, challenge Challenge, req VerifyAttestationRequest) (Verdict, error) {
+func (p AndroidProvider) Verify(ctx context.Context, app config.AppConfig, challenge Challenge, req VerifyAttestationRequest) (Verdict, error) {
 	if err := ensurePlatformEnabled(app, PlatformAndroid); err != nil {
 		return Verdict{}, err
 	}
@@ -44,7 +86,156 @@ func (AndroidProvider) Verify(_ context.Context, app config.AppConfig, challenge
 		return Verdict{}, errors.New("android integrity token is required")
 	}
 
-	return Verdict{}, fmt.Errorf("play integrity verification is not implemented yet for app %q", app.ID)
+	verifier := p.verifier
+	if verifier == nil {
+		verifier = GooglePlayIntegrityVerifier{}
+	}
+	payload, err := verifier.Decode(ctx, app, req.Token)
+	if err != nil {
+		return Verdict{}, err
+	}
+	if err := validatePlayIntegrityPayload(app, challenge, payload); err != nil {
+		return Verdict{}, err
+	}
+
+	return playIntegrityVerdict(app, challenge, req, payload), nil
+}
+
+func validatePlayIntegrityPayload(app config.AppConfig, challenge Challenge, payload *playintegrity.TokenPayloadExternal) error {
+	if payload == nil {
+		return errors.New("play integrity token payload is required")
+	}
+	if payload.RequestDetails == nil {
+		return errors.New("play integrity request details are required")
+	}
+	if payload.RequestDetails.RequestPackageName != app.Android.PackageName {
+		return fmt.Errorf("play integrity request package %q does not match configured package %q", payload.RequestDetails.RequestPackageName, app.Android.PackageName)
+	}
+	if payload.RequestDetails.Nonce != "" {
+		if payload.RequestDetails.Nonce != challenge.Nonce {
+			return errors.New("play integrity nonce does not match challenge")
+		}
+	} else if payload.RequestDetails.RequestHash != "" {
+		if payload.RequestDetails.RequestHash != challenge.Nonce {
+			return errors.New("play integrity request_hash does not match challenge")
+		}
+	} else {
+		return errors.New("play integrity request details must include nonce or request_hash")
+	}
+	if err := validatePlayIntegrityTimestamp(challenge, payload.RequestDetails.TimestampMillis); err != nil {
+		return err
+	}
+
+	if payload.AppIntegrity == nil {
+		return errors.New("play integrity app integrity verdict is required")
+	}
+	if payload.AppIntegrity.PackageName != "" && payload.AppIntegrity.PackageName != app.Android.PackageName {
+		return fmt.Errorf("play integrity app package %q does not match configured package %q", payload.AppIntegrity.PackageName, app.Android.PackageName)
+	}
+	if app.Android.RequirePlayRecognized && payload.AppIntegrity.AppRecognitionVerdict != "PLAY_RECOGNIZED" {
+		return fmt.Errorf("play integrity app recognition verdict %q is not PLAY_RECOGNIZED", payload.AppIntegrity.AppRecognitionVerdict)
+	}
+	if len(app.Android.ExpectedCertificateSHA256) > 0 && !hasAnyString(payload.AppIntegrity.CertificateSha256Digest, app.Android.ExpectedCertificateSHA256) {
+		return errors.New("play integrity certificate digest does not match configured certificates")
+	}
+	if len(app.Android.AllowedVersionCodePrefixes) > 0 && !hasAnyPrefix(strconv.FormatInt(payload.AppIntegrity.VersionCode, 10), app.Android.AllowedVersionCodePrefixes) {
+		return fmt.Errorf("play integrity app version_code %d is not allowed", payload.AppIntegrity.VersionCode)
+	}
+
+	if len(app.Android.RequiredDeviceIntegrity) > 0 {
+		if payload.DeviceIntegrity == nil {
+			return errors.New("play integrity device integrity verdict is required")
+		}
+		for _, required := range app.Android.RequiredDeviceIntegrity {
+			if !hasString(payload.DeviceIntegrity.DeviceRecognitionVerdict, required) {
+				return fmt.Errorf("play integrity device verdict does not include %q", required)
+			}
+		}
+	}
+	return nil
+}
+
+func validatePlayIntegrityTimestamp(challenge Challenge, timestampMillis int64) error {
+	if timestampMillis == 0 {
+		return errors.New("play integrity request timestamp is required")
+	}
+	requestedAt := time.UnixMilli(timestampMillis).UTC()
+	now := time.Now().UTC()
+	if requestedAt.Before(challenge.CreatedAt.Add(-2 * time.Minute)) {
+		return errors.New("play integrity token was requested before challenge creation")
+	}
+	if requestedAt.After(now.Add(2 * time.Minute)) {
+		return errors.New("play integrity token timestamp is in the future")
+	}
+	return nil
+}
+
+func playIntegrityVerdict(app config.AppConfig, challenge Challenge, req VerifyAttestationRequest, payload *playintegrity.TokenPayloadExternal) Verdict {
+	claims := map[string]any{
+		"package_name":            payload.AppIntegrity.PackageName,
+		"app_recognition_verdict": payload.AppIntegrity.AppRecognitionVerdict,
+		"certificate_sha256":      payload.AppIntegrity.CertificateSha256Digest,
+		"version_code":            payload.AppIntegrity.VersionCode,
+		"request_package_name":    payload.RequestDetails.RequestPackageName,
+		"timestamp_millis":        payload.RequestDetails.TimestampMillis,
+	}
+	if payload.RequestDetails.Nonce != "" {
+		claims["nonce"] = payload.RequestDetails.Nonce
+	}
+	if payload.RequestDetails.RequestHash != "" {
+		claims["request_hash"] = payload.RequestDetails.RequestHash
+	}
+	if payload.DeviceIntegrity != nil {
+		claims["device_recognition_verdict"] = payload.DeviceIntegrity.DeviceRecognitionVerdict
+	}
+	if payload.AccountDetails != nil {
+		claims["app_licensing_verdict"] = payload.AccountDetails.AppLicensingVerdict
+	}
+	if payload.TestingDetails != nil {
+		claims["testing_response"] = payload.TestingDetails.IsTestingResponse
+	}
+
+	return Verdict{
+		Platform:       PlatformAndroid,
+		AppID:          app.ID,
+		InstallID:      req.InstallID,
+		Action:         challenge.Action,
+		RiskLevel:      "low",
+		Provider:       "play_integrity",
+		Claims:         claims,
+		ChallengeID:    challenge.ID,
+		ChallengeNonce: challenge.Nonce,
+		AttestedAt:     time.Now().UTC(),
+	}
+}
+
+func hasString(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAnyString(values []string, expected []string) bool {
+	for _, value := range values {
+		for _, candidate := range expected {
+			if strings.EqualFold(strings.TrimSpace(value), strings.TrimSpace(candidate)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasAnyPrefix(value string, prefixes []string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(value, strings.TrimSpace(prefix)) {
+			return true
+		}
+	}
+	return false
 }
 
 type AppleProvider struct{}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/pycify/phylax/internal/app/helper"
 	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
 	"github.com/pycify/phylax/internal/phylax"
 )
@@ -30,16 +31,16 @@ func NewAttestationController(service *attestationservice.Service) *AttestationC
 //	@Router		/v1/challenges [post]
 func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.CreateChallengeRequest
-	if !decodeAndValidate(w, req, c.validate, &payload) {
+	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
 
 	response, err := c.service.CreateChallenge(req.Context(), payload)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		helper.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, response)
+	helper.WriteJSON(w, http.StatusCreated, response)
 }
 
 // VerifyAttestation godoc
@@ -55,16 +56,16 @@ func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http
 //	@Router		/v1/attestations/verify [post]
 func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.VerifyAttestationRequest
-	if !decodeAndValidate(w, req, c.validate, &payload) {
+	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
 
 	response, err := c.service.VerifyAttestation(req.Context(), payload)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		helper.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, response)
+	helper.WriteJSON(w, http.StatusOK, response)
 }
 
 // Introspect godoc
@@ -80,8 +81,8 @@ func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *ht
 //	@Router		/v1/sessions/introspect [post]
 func (c *AttestationController) Introspect(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.IntrospectRequest
-	if !decodeAndValidate(w, req, c.validate, &payload) {
+	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
-	writeJSON(w, http.StatusOK, c.service.Introspect(req.Context(), payload.Token))
+	helper.WriteJSON(w, http.StatusOK, c.service.Introspect(req.Context(), payload.Token))
 }

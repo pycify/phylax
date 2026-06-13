@@ -1,16 +1,15 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/pycify/phylax/docs"
 	"github.com/pycify/phylax/internal/app/controllers"
+	helper "github.com/pycify/phylax/internal/app/helper"
 	approutes "github.com/pycify/phylax/internal/app/routes"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
-	"github.com/pycify/phylax/internal/app/types/response"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -72,27 +71,8 @@ func (r *Router) openapi(w http.ResponseWriter, req *http.Request) {
 //	@Success	200	{object}	response.HealthResponse
 //	@Router		/v1/health [get]
 func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, HealthResponse{
+	helper.WriteJSON(w, http.StatusOK, HealthResponse{
 		OK:      true,
 		Service: "phylax",
-	})
-}
-
-func writeJSON[T any](w http.ResponseWriter, status int, data T) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(response.APIResponse[T]{
-		Error:   false,
-		Message: "success",
-		Data:    &data,
-	})
-}
-
-func writeError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(response.ErrorResponse{
-		Error:   true,
-		Message: message,
 	})
 }

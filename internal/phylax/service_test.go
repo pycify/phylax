@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pycify/phylax/internal/config"
+	"google.golang.org/api/playintegrity/v1"
 )
 
 func TestServiceCreatesChallengeAndVerifiesMockAndroidAttestation(t *testing.T) {
@@ -74,6 +76,60 @@ func TestServiceRejectsReusedChallenge(t *testing.T) {
 	}
 }
 
+func TestServiceVerifiesPlayIntegrityVerdict(t *testing.T) {
+	service := newRealAndroidTestService(t, fakePlayIntegrityVerifier{})
+	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
+		AppID:     "demo",
+		Platform:  PlatformAndroid,
+		Action:    "document_ai.ask_question",
+		InstallID: "install_123",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verification, err := service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
+		AppID:       "demo",
+		Platform:    PlatformAndroid,
+		ChallengeID: challenge.ChallengeID,
+		InstallID:   "install_123",
+		Token:       challenge.Nonce,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verification.Verdict.Provider != "play_integrity" {
+		t.Fatalf("expected play_integrity provider, got %q", verification.Verdict.Provider)
+	}
+	if verification.Verdict.Claims["app_recognition_verdict"] != "PLAY_RECOGNIZED" {
+		t.Fatalf("expected PLAY_RECOGNIZED claim, got %#v", verification.Verdict.Claims["app_recognition_verdict"])
+	}
+}
+
+func TestServiceRejectsPlayIntegrityPackageMismatch(t *testing.T) {
+	service := newRealAndroidTestService(t, fakePlayIntegrityVerifier{requestPackageName: "com.attacker.app"})
+	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
+		AppID:     "demo",
+		Platform:  PlatformAndroid,
+		Action:    "document_ai.ask_question",
+		InstallID: "install_123",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
+		AppID:       "demo",
+		Platform:    PlatformAndroid,
+		ChallengeID: challenge.ChallengeID,
+		InstallID:   "install_123",
+		Token:       challenge.Nonce,
+	})
+	if err == nil {
+		t.Fatal("expected package mismatch to be rejected")
+	}
+}
+
 func newTestService(t *testing.T) *Service {
 	t.Helper()
 	service, err := NewService(config.Config{
@@ -100,6 +156,64 @@ func newTestService(t *testing.T) *Service {
 		t.Fatal(err)
 	}
 	return service
+}
+
+func newRealAndroidTestService(t *testing.T, verifier PlayIntegrityVerifier) *Service {
+	t.Helper()
+	service, err := NewService(config.Config{
+		Environment: "development",
+		Server:      config.ServerConfig{Addr: ":8080"},
+		Storage:     config.StorageConfig{Driver: "memory"},
+		Token: config.TokenConfig{
+			Issuer:     "phylax-test",
+			Secret:     "test-secret-with-more-than-32-bytes",
+			TTLSeconds: 900,
+		},
+		Challenges: config.ChallengeConfig{TTLSeconds: 300},
+		Apps: []config.AppConfig{{
+			ID:   "demo",
+			Name: "Demo",
+			Android: config.AndroidConfig{
+				Enabled:                   true,
+				PackageName:               "com.example.demo",
+				RequirePlayRecognized:     true,
+				RequiredDeviceIntegrity:   []string{"MEETS_DEVICE_INTEGRITY"},
+				ExpectedCertificateSHA256: []string{"cert-digest"},
+			},
+		}},
+	}, newMemoryTestStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.providers[PlatformAndroid] = AndroidProvider{verifier: verifier}
+	return service
+}
+
+type fakePlayIntegrityVerifier struct {
+	requestPackageName string
+}
+
+func (v fakePlayIntegrityVerifier) Decode(_ context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error) {
+	requestPackageName := v.requestPackageName
+	if requestPackageName == "" {
+		requestPackageName = app.Android.PackageName
+	}
+	return &playintegrity.TokenPayloadExternal{
+		RequestDetails: &playintegrity.RequestDetails{
+			RequestPackageName: requestPackageName,
+			Nonce:              integrityToken,
+			TimestampMillis:    time.Now().UTC().UnixMilli(),
+		},
+		AppIntegrity: &playintegrity.AppIntegrity{
+			AppRecognitionVerdict:   "PLAY_RECOGNIZED",
+			PackageName:             app.Android.PackageName,
+			CertificateSha256Digest: []string{"cert-digest"},
+			VersionCode:             42,
+		},
+		DeviceIntegrity: &playintegrity.DeviceIntegrity{
+			DeviceRecognitionVerdict: []string{"MEETS_DEVICE_INTEGRITY"},
+		},
+	}, nil
 }
 
 type memoryTestStore struct {
