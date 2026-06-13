@@ -56,13 +56,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	service, err := phylax.NewService(cfg, st, logger)
-	if err != nil {
-		logger.Error("failed to create service", "error", err)
-		os.Exit(1)
-	}
-	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
-
 	projectRepository, err := createProjectRepository(cfg)
 	if err != nil {
 		logger.Error("failed to create project repository", "error", err)
@@ -70,6 +63,13 @@ func main() {
 	}
 	projectService := projectservice.NewService(projectRepository)
 	projectController := controllers.NewProjectController(projectService)
+
+	service, err := phylax.NewService(cfg, st, logger, projectService)
+	if err != nil {
+		logger.Error("failed to create service", "error", err)
+		os.Exit(1)
+	}
+	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
 
 	authRepository, err := createAuthRepository(cfg)
 	if err != nil {

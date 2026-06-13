@@ -15,12 +15,7 @@ func TestLoadAppliesEnvironmentOverrides(t *testing.T) {
 	t.Setenv("PHYLAX_TOKEN_SECRET", "test-secret-with-more-than-32-bytes")
 
 	path := writeConfig(t, `{
-	  "token": {"secret": "file-secret-with-more-than-32-bytes"},
-	  "apps": [{
-	    "id": "demo",
-	    "name": "Demo",
-	    "android": {"enabled": true, "package_name": "com.example.demo"}
-	  }]
+	  "token": {"secret": "file-secret-with-more-than-32-bytes"}
 	}`)
 
 	cfg, err := Load(path)
@@ -30,14 +25,14 @@ func TestLoadAppliesEnvironmentOverrides(t *testing.T) {
 	require.Equal(t, "test-secret-with-more-than-32-bytes", cfg.Token.Secret)
 }
 
-func TestLoadRejectsDuplicateApps(t *testing.T) {
+func TestLoadDoesNotRequireStaticApps(t *testing.T) {
 	path := writeConfig(t, `{
-	  "token": {"secret": "file-secret-with-more-than-32-bytes"},
-	  "apps": [{"id": "demo", "name": "Demo"}, {"id": "demo", "name": "Demo 2"}]
+	  "token": {"secret": "file-secret-with-more-than-32-bytes"}
 	}`)
 
-	_, err := Load(path)
-	require.Error(t, err)
+	cfg, err := Load(path)
+	require.NoError(t, err)
+	require.Equal(t, "file-secret-with-more-than-32-bytes", cfg.Token.Secret)
 }
 
 func writeConfig(t *testing.T, content string) string {

@@ -11,6 +11,7 @@ import (
 	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
 	"github.com/pycify/phylax/internal/app/types/enum"
 	projectvalidators "github.com/pycify/phylax/internal/app/validators/projects"
+	"github.com/pycify/phylax/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -31,10 +32,63 @@ type Repository interface {
 	CreateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	ListApps(ctx context.Context, projectID string) ([]projectmodels.ProjectApp, error)
 	FindApp(ctx context.Context, projectID string, appID string) (*projectmodels.ProjectApp, error)
+	FindAppByID(ctx context.Context, appID string) (*projectmodels.ProjectApp, error)
 	FindAppForOwner(ctx context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error)
 	UpdateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	DeleteApp(ctx context.Context, projectID string, appID string) error
 	DeleteAppForOwner(ctx context.Context, ownerUserID string, appID string) error
+}
+
+func (s *Service) ResolveApp(ctx context.Context, appID string) (config.AppConfig, error) {
+	app, err := s.repository.FindAppByID(ctx, appID)
+	if err != nil {
+		return config.AppConfig{}, err
+	}
+	return appConfigFromProjectApp(*app), nil
+}
+
+func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
+	cfg := config.AppConfig{
+		ID:   app.ID,
+		Name: app.Name,
+	}
+	switch app.Provider {
+	case enum.AppProviderPlayIntegrity:
+		cfg.Android = config.AndroidConfig{
+			Enabled:               app.Enabled,
+			Provider:              string(app.Provider),
+			PackageName:           strings.TrimSpace(app.PackageName),
+			ServiceAccountJSONEnv: "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+			RequirePlayRecognized: true,
+			RequiredDeviceIntegrity: []string{
+				"MEETS_DEVICE_INTEGRITY",
+			},
+		}
+	case enum.AppProviderAppAttest:
+		cfg.Apple = config.AppleConfig{
+			Enabled:     app.Enabled,
+			Provider:    string(app.Provider),
+			BundleID:    strings.TrimSpace(app.BundleID),
+			Environment: string(app.Environment),
+		}
+	case enum.AppProviderFirebase:
+		cfg.Firebase = config.FirebaseConfig{
+			Enabled:        app.Enabled,
+			CredentialsEnv: "FIREBASE_CREDENTIALS_JSON",
+		}
+		cfg.Android = config.AndroidConfig{
+			Enabled:     app.Enabled && app.Platform == enum.AppPlatformAndroid,
+			Provider:    string(app.Provider),
+			PackageName: strings.TrimSpace(app.PackageName),
+		}
+		cfg.Apple = config.AppleConfig{
+			Enabled:     app.Enabled && app.Platform == enum.AppPlatformIOS,
+			Provider:    string(app.Provider),
+			BundleID:    strings.TrimSpace(app.BundleID),
+			Environment: string(app.Environment),
+		}
+	}
+	return cfg
 }
 
 type Service struct {
@@ -338,6 +392,21 @@ func (r *GormRepository) ListApps(ctx context.Context, projectID string) ([]proj
 func (r *GormRepository) FindApp(ctx context.Context, projectID string, appID string) (*projectmodels.ProjectApp, error) {
 	var app projectmodels.ProjectApp
 	err := r.db.WithContext(ctx).Where("project_id = ? and id = ?", projectID, appID).First(&app).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAppNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &app, nil
+}
+
+func (r *GormRepository) FindAppByID(ctx context.Context, appID string) (*projectmodels.ProjectApp, error) {
+	var app projectmodels.ProjectApp
+	err := r.db.WithContext(ctx).
+		Joins("join projects on projects.id = project_apps.project_id").
+		Where("project_apps.id = ? and projects.deleted_at is null", appID).
+		First(&app).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrAppNotFound
 	}

@@ -110,6 +110,20 @@ func (r *MemoryRepository) FindApp(_ context.Context, projectID string, appID st
 	return &app, nil
 }
 
+func (r *MemoryRepository) FindAppByID(_ context.Context, appID string) (*projectmodels.ProjectApp, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	app, ok := r.apps[appID]
+	if !ok || !app.DeletedAt.Time.IsZero() {
+		return nil, ErrAppNotFound
+	}
+	project, ok := r.projects[app.ProjectID]
+	if !ok || !project.DeletedAt.Time.IsZero() {
+		return nil, ErrAppNotFound
+	}
+	return &app, nil
+}
+
 func (r *MemoryRepository) FindAppForOwner(_ context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

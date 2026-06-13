@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "tmp/main"
+  entrypoint = "tmp/main"
   cmd = "go build -o tmp/main ./cmd/phylax"
   delay = 500
   exclude_dir = ["tmp", "vendor", "testdata"]

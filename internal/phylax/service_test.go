@@ -142,7 +142,8 @@ func newTestService(t *testing.T) *Service {
 			TTLSeconds: 900,
 		},
 		Challenges: config.ChallengeConfig{TTLSeconds: 300},
-		Apps: []config.AppConfig{{
+	}, newMemoryTestStore(), slog.New(slog.NewTextHandler(io.Discard, nil)), staticAppResolver{apps: map[string]config.AppConfig{
+		"demo": {
 			ID:   "demo",
 			Name: "Demo",
 			Android: config.AndroidConfig{
@@ -150,8 +151,8 @@ func newTestService(t *testing.T) *Service {
 				PackageName:           "com.example.demo",
 				AllowMockVerification: true,
 			},
-		}},
-	}, newMemoryTestStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+		},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +171,8 @@ func newRealAndroidTestService(t *testing.T, verifier PlayIntegrityVerifier) *Se
 			TTLSeconds: 900,
 		},
 		Challenges: config.ChallengeConfig{TTLSeconds: 300},
-		Apps: []config.AppConfig{{
+	}, newMemoryTestStore(), slog.New(slog.NewTextHandler(io.Discard, nil)), staticAppResolver{apps: map[string]config.AppConfig{
+		"demo": {
 			ID:   "demo",
 			Name: "Demo",
 			Android: config.AndroidConfig{
@@ -180,8 +182,8 @@ func newRealAndroidTestService(t *testing.T, verifier PlayIntegrityVerifier) *Se
 				RequiredDeviceIntegrity:   []string{"MEETS_DEVICE_INTEGRITY"},
 				ExpectedCertificateSHA256: []string{"cert-digest"},
 			},
-		}},
-	}, newMemoryTestStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+		},
+	}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,6 +193,18 @@ func newRealAndroidTestService(t *testing.T, verifier PlayIntegrityVerifier) *Se
 
 type fakePlayIntegrityVerifier struct {
 	requestPackageName string
+}
+
+type staticAppResolver struct {
+	apps map[string]config.AppConfig
+}
+
+func (r staticAppResolver) ResolveApp(_ context.Context, appID string) (config.AppConfig, error) {
+	app, ok := r.apps[appID]
+	if !ok {
+		return config.AppConfig{}, errors.New("app not found")
+	}
+	return app, nil
 }
 
 func (v fakePlayIntegrityVerifier) Decode(_ context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error) {

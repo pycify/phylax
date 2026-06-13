@@ -132,6 +132,32 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 	require.Contains(t, status.NextSteps, "connect a Google Cloud or Play Console credential before Phylax can inspect Google-side configuration")
 }
 
+func TestProjectServiceResolvesAppConfigForAttestation(t *testing.T) {
+	service := NewService(NewMemoryRepository())
+	ctx := context.Background()
+
+	project, err := service.CreateProject(ctx, "user_1", projectvalidators.CreateProjectRequest{
+		Name: "Acme",
+		Slug: "acme",
+	})
+	require.NoError(t, err)
+	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Acme Android",
+		Platform:    enum.AppPlatformAndroid,
+		Provider:    enum.AppProviderPlayIntegrity,
+		Environment: enum.AppEnvironmentProduction,
+		PackageName: "com.acme.app",
+	})
+	require.NoError(t, err)
+
+	resolved, err := service.ResolveApp(ctx, app.ID)
+	require.NoError(t, err)
+	require.Equal(t, app.ID, resolved.ID)
+	require.True(t, resolved.Android.Enabled)
+	require.Equal(t, "com.acme.app", resolved.Android.PackageName)
+	require.Equal(t, "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", resolved.Android.ServiceAccountJSONEnv)
+}
+
 func TestProjectServiceSoftDeletesAppsThroughProjectDelete(t *testing.T) {
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()

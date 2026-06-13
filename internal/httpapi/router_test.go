@@ -116,7 +116,8 @@ func newTestRouter(t *testing.T) http.Handler {
 			TTLSeconds: 900,
 		},
 		Challenges: config.ChallengeConfig{TTLSeconds: 300},
-		Apps: []config.AppConfig{{
+	}, store.NewMemoryStore(), slog.New(slog.NewTextHandler(io.Discard, nil)), testAppResolver{apps: map[string]config.AppConfig{
+		"demo": {
 			ID:   "demo",
 			Name: "Demo",
 			Android: config.AndroidConfig{
@@ -124,10 +125,22 @@ func newTestRouter(t *testing.T) http.Handler {
 				PackageName:           "com.example.demo",
 				AllowMockVerification: true,
 			},
-		}},
-	}, store.NewMemoryStore(), slog.New(slog.NewTextHandler(io.Discard, nil)))
+		},
+	}})
 	require.NoError(t, err)
 	_ = context.Background()
 	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
 	return NewRouter(attestationController, nil, nil, nil)
+}
+
+type testAppResolver struct {
+	apps map[string]config.AppConfig
+}
+
+func (r testAppResolver) ResolveApp(_ context.Context, appID string) (config.AppConfig, error) {
+	app, ok := r.apps[appID]
+	if !ok {
+		return config.AppConfig{}, phylax.ErrNotFound
+	}
+	return app, nil
 }

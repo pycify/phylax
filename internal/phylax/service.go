@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +22,10 @@ type Store interface {
 	FindSession(ctx context.Context, id string) (*AttestationSession, error)
 }
 
+type AppResolver interface {
+	ResolveApp(ctx context.Context, appID string) (config.AppConfig, error)
+}
+
 type Provider interface {
 	Platform() Platform
 	Name() string
@@ -34,16 +37,11 @@ type Service struct {
 	cfg       config.Config
 	store     Store
 	logger    *slog.Logger
-	apps      map[string]config.AppConfig
+	apps      AppResolver
 	providers map[Platform]Provider
 }
 
-func NewService(cfg config.Config, st Store, logger *slog.Logger) (*Service, error) {
-	apps := map[string]config.AppConfig{}
-	for _, app := range cfg.Apps {
-		apps[app.ID] = app
-	}
-
+func NewService(cfg config.Config, st Store, logger *slog.Logger, apps AppResolver) (*Service, error) {
 	return &Service{
 		cfg:    cfg,
 		store:  st,
@@ -57,51 +55,13 @@ func NewService(cfg config.Config, st Store, logger *slog.Logger) (*Service, err
 	}, nil
 }
 
-func (s *Service) Apps() []config.AppConfig {
-	apps := make([]config.AppConfig, 0, len(s.cfg.Apps))
-	apps = append(apps, s.cfg.Apps...)
-	return apps
-}
-
-func (s *Service) ProviderStatuses(appID string) ([]ProviderStatus, error) {
-	app, ok := s.apps[appID]
-	if !ok {
-		return nil, fmt.Errorf("app %q not found", appID)
-	}
-
-	statuses := []ProviderStatus{}
-	if provider, ok := s.providers[PlatformAndroid]; ok {
-		status := provider.Status()
-		status.Enabled = app.Android.Enabled
-		status.Ready = app.Android.Enabled && app.Android.PackageName != ""
-		if app.Android.Enabled && app.Android.ServiceAccountJSONEnv != "" && os.Getenv(app.Android.ServiceAccountJSONEnv) == "" {
-			status.Ready = false
-			status.Issues = append(status.Issues, "service account env is not set")
-		}
-		statuses = append(statuses, status)
-	}
-	if provider, ok := s.providers[PlatformApple]; ok {
-		status := provider.Status()
-		status.Enabled = app.Apple.Enabled
-		status.Ready = app.Apple.Enabled && app.Apple.BundleID != "" && app.Apple.TeamID != ""
-		statuses = append(statuses, status)
-	}
-	if provider, ok := s.providers[PlatformFirebase]; ok {
-		status := provider.Status()
-		status.Enabled = app.Firebase.Enabled
-		status.Ready = app.Firebase.Enabled && app.Firebase.ProjectID != ""
-		statuses = append(statuses, status)
-	}
-	return statuses, nil
-}
-
 func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeRequest) (CreateChallengeResponse, error) {
 	if req.AppID == "" || req.Platform == "" || req.Action == "" || req.InstallID == "" {
 		return CreateChallengeResponse{}, errors.New("app_id, platform, action, and install_id are required")
 	}
-	app, ok := s.apps[req.AppID]
-	if !ok {
-		return CreateChallengeResponse{}, fmt.Errorf("app %q not found", req.AppID)
+	app, err := s.resolveApp(ctx, req.AppID)
+	if err != nil {
+		return CreateChallengeResponse{}, err
 	}
 	if err := ensurePlatformEnabled(app, req.Platform); err != nil {
 		return CreateChallengeResponse{}, err
@@ -132,9 +92,9 @@ func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeReques
 }
 
 func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRequest) (VerifyAttestationResponse, error) {
-	app, ok := s.apps[req.AppID]
-	if !ok {
-		return VerifyAttestationResponse{}, fmt.Errorf("app %q not found", req.AppID)
+	app, err := s.resolveApp(ctx, req.AppID)
+	if err != nil {
+		return VerifyAttestationResponse{}, err
 	}
 	provider, ok := s.providers[req.Platform]
 	if !ok {
@@ -187,6 +147,17 @@ func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRe
 		Verdict:   verdict,
 		ExpiresAt: session.ExpiresAt,
 	}, nil
+}
+
+func (s *Service) resolveApp(ctx context.Context, appID string) (config.AppConfig, error) {
+	if s.apps == nil {
+		return config.AppConfig{}, errors.New("app resolver is not configured")
+	}
+	app, err := s.apps.ResolveApp(ctx, appID)
+	if err != nil {
+		return config.AppConfig{}, err
+	}
+	return app, nil
 }
 
 func (s *Service) Introspect(ctx context.Context, token string) IntrospectResponse {

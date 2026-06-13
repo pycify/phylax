@@ -17,7 +17,6 @@ type Config struct {
 	Mail        MailConfig      `json:"mail" mapstructure:"mail"`
 	Token       TokenConfig     `json:"token" mapstructure:"token"`
 	Challenges  ChallengeConfig `json:"challenges" mapstructure:"challenges"`
-	Apps        []AppConfig     `json:"apps" mapstructure:"apps"`
 }
 
 type ServerConfig struct {
@@ -205,30 +204,6 @@ func (c Config) Validate() error {
 	}
 	if len(c.Token.Secret) < 32 {
 		return errors.New("token.secret must be at least 32 bytes")
-	}
-	if len(c.Apps) == 0 {
-		return errors.New("at least one app must be configured")
-	}
-
-	seen := map[string]bool{}
-	for _, app := range c.Apps {
-		if app.ID == "" {
-			return errors.New("apps[].id is required")
-		}
-		if seen[app.ID] {
-			return fmt.Errorf("duplicate app id %q", app.ID)
-		}
-		seen[app.ID] = true
-
-		if app.Android.Enabled && app.Android.PackageName == "" {
-			return fmt.Errorf("app %q android.package_name is required", app.ID)
-		}
-		if app.Apple.Enabled && (app.Apple.BundleID == "" || app.Apple.TeamID == "") {
-			return fmt.Errorf("app %q apple.bundle_id and apple.team_id are required", app.ID)
-		}
-		if app.Firebase.Enabled && app.Firebase.ProjectID == "" {
-			return fmt.Errorf("app %q firebase.project_id is required", app.ID)
-		}
 	}
 	return nil
 }
