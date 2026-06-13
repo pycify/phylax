@@ -15,22 +15,24 @@ type UpdateProjectRequest struct {
 }
 
 type CreateProjectAppRequest struct {
-	Name        string              `json:"name" validate:"required,min=2,max=120"`
-	Platform    enum.AppPlatform    `json:"platform" validate:"required,oneof=android ios"`
-	Provider    enum.AppProvider    `json:"provider" validate:"required,oneof=play_integrity app_attest firebase_app_check"`
-	Environment enum.AppEnvironment `json:"environment" validate:"required,oneof=development staging production"`
-	PackageName string              `json:"package_name" validate:"omitempty,min=3,max=255"`
-	BundleID    string              `json:"bundle_id" validate:"omitempty,min=3,max=255"`
-	Enabled     *bool               `json:"enabled"`
+	Name               string              `json:"name" validate:"required,min=2,max=120"`
+	Platform           enum.AppPlatform    `json:"platform" validate:"required,oneof=android ios"`
+	Provider           enum.AppProvider    `json:"provider" validate:"required,oneof=play_integrity app_attest firebase_app_check"`
+	Environment        enum.AppEnvironment `json:"environment" validate:"required,oneof=development staging production"`
+	PackageName        string              `json:"package_name" validate:"omitempty,min=3,max=255"`
+	BundleID           string              `json:"bundle_id" validate:"omitempty,min=3,max=255"`
+	CloudProjectNumber string              `json:"cloud_project_number" validate:"required_if=Provider play_integrity,omitempty,numeric,min=6,max=32"`
+	Enabled            *bool               `json:"enabled"`
 }
 
 type UpdateProjectAppRequest struct {
-	Name        string              `json:"name" validate:"omitempty,min=2,max=120"`
-	Provider    enum.AppProvider    `json:"provider" validate:"omitempty,oneof=play_integrity app_attest firebase_app_check"`
-	Environment enum.AppEnvironment `json:"environment" validate:"omitempty,oneof=development staging production"`
-	PackageName string              `json:"package_name" validate:"omitempty,min=3,max=255"`
-	BundleID    string              `json:"bundle_id" validate:"omitempty,min=3,max=255"`
-	Enabled     *bool               `json:"enabled"`
+	Name               string              `json:"name" validate:"omitempty,min=2,max=120"`
+	Provider           enum.AppProvider    `json:"provider" validate:"omitempty,oneof=play_integrity app_attest firebase_app_check"`
+	Environment        enum.AppEnvironment `json:"environment" validate:"omitempty,oneof=development staging production"`
+	PackageName        string              `json:"package_name" validate:"omitempty,min=3,max=255"`
+	BundleID           string              `json:"bundle_id" validate:"omitempty,min=3,max=255"`
+	CloudProjectNumber string              `json:"cloud_project_number" validate:"omitempty,numeric,min=6,max=32"`
+	Enabled            *bool               `json:"enabled"`
 }
 
 type StoreAppCredentialRequest struct {

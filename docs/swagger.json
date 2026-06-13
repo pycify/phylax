@@ -1056,6 +1056,9 @@
                 "challenge_id": {
                     "type": "string"
                 },
+                "cloud_project_number": {
+                    "type": "string"
+                },
                 "expires_at": {
                     "type": "string"
                 },
@@ -1315,6 +1318,11 @@
                     "maxLength": 255,
                     "minLength": 3
                 },
+                "cloud_project_number": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 6
+                },
                 "enabled": {
                     "type": "boolean"
                 },
@@ -1392,6 +1400,9 @@
             "type": "object",
             "properties": {
                 "bundle_id": {
+                    "type": "string"
+                },
+                "cloud_project_number": {
                     "type": "string"
                 },
                 "created_at": {
@@ -1531,6 +1542,11 @@
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 3
+                },
+                "cloud_project_number": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 6
                 },
                 "enabled": {
                     "type": "boolean"

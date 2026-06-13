@@ -84,6 +84,7 @@ create table if not exists project_apps (
   environment text not null,
   package_name text not null default '',
   bundle_id text not null default '',
+  cloud_project_number text not null default '',
   enabled boolean not null default true,
   created_at timestamptz not null,
   updated_at timestamptz not null,
@@ -95,6 +96,9 @@ create table if not exists project_apps (
     (platform = 'android' and package_name <> '' and bundle_id = '')
     or
     (platform = 'ios' and bundle_id <> '' and package_name = '')
+  ),
+  constraint project_apps_play_integrity_cloud_project_check check (
+    provider <> 'play_integrity' or cloud_project_number <> ''
   )
 );
 

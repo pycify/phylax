@@ -22,11 +22,12 @@ func TestProjectServiceCreatesProjectAndNestedApps(t *testing.T) {
 	require.Equal(t, "user_1", project.OwnerUserID)
 
 	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
-		Name:        "Acme Android",
-		Platform:    enum.AppPlatformAndroid,
-		Provider:    enum.AppProviderPlayIntegrity,
-		Environment: enum.AppEnvironmentDevelopment,
-		PackageName: "com.acme.app",
+		Name:               "Acme Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentDevelopment,
+		PackageName:        "com.acme.app",
+		CloudProjectNumber: "123456789012",
 	})
 	require.NoError(t, err)
 	require.Equal(t, project.ID, app.ProjectID)
@@ -69,11 +70,12 @@ func TestProjectServiceFindsAppsByIDWithinOwnerScope(t *testing.T) {
 	})
 	require.NoError(t, err)
 	app, err := service.CreateApp(ctx, "owner", project.ID, projectvalidators.CreateProjectAppRequest{
-		Name:        "Owned Android",
-		Platform:    enum.AppPlatformAndroid,
-		Provider:    enum.AppProviderPlayIntegrity,
-		Environment: enum.AppEnvironmentDevelopment,
-		PackageName: "com.acme.app",
+		Name:               "Owned Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentDevelopment,
+		PackageName:        "com.acme.app",
+		CloudProjectNumber: "123456789012",
 	})
 	require.NoError(t, err)
 
@@ -96,11 +98,21 @@ func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
-		Name:        "Broken Android",
+		Name:               "Broken Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentDevelopment,
+		BundleID:           "com.acme.ios",
+		CloudProjectNumber: "123456789012",
+	})
+	require.True(t, errors.Is(err, ErrInvalidApp))
+
+	_, err = service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Missing Cloud Project",
 		Platform:    enum.AppPlatformAndroid,
 		Provider:    enum.AppProviderPlayIntegrity,
 		Environment: enum.AppEnvironmentDevelopment,
-		BundleID:    "com.acme.ios",
+		PackageName: "com.acme.app",
 	})
 	require.True(t, errors.Is(err, ErrInvalidApp))
 }
@@ -116,11 +128,12 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 	})
 	require.NoError(t, err)
 	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
-		Name:        "Acme Android",
-		Platform:    enum.AppPlatformAndroid,
-		Provider:    enum.AppProviderPlayIntegrity,
-		Environment: enum.AppEnvironmentProduction,
-		PackageName: "com.acme.app",
+		Name:               "Acme Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentProduction,
+		PackageName:        "com.acme.app",
+		CloudProjectNumber: "123456789012",
 	})
 	require.NoError(t, err)
 	credential, err := service.StoreAppCredential(ctx, "user_1", app.ID, projectvalidators.StoreAppCredentialRequest{
@@ -139,6 +152,15 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 	require.Equal(t, "manual_verification_required", status.ExternalConfigurationCheck)
 	require.Equal(t, "com.acme.app", status.Identifier)
 	require.Contains(t, status.NextSteps, "In Play Console, open the app, go to Protected with Play, then link the Cloud project under Play Integrity API.")
+	require.Contains(t, status.SetupSteps, AppSetupStep{
+		Key:                "google_cloud_project",
+		Title:              "Configure Google Cloud project number",
+		Status:             "completed",
+		VerificationMethod: "database",
+		Details:            "Google Cloud project number is present on the Phylax app record.",
+		Action:             "Set cloud_project_number to the numeric Google Cloud project number linked to Play Integrity.",
+		DocsURL:            "https://developer.android.com/google/play/integrity/setup",
+	})
 	require.Contains(t, status.SetupSteps, AppSetupStep{
 		Key:                "service_account_credentials",
 		Title:              "Configure backend service account credentials",
@@ -160,11 +182,12 @@ func TestProjectServiceResolvesAppConfigForAttestation(t *testing.T) {
 	})
 	require.NoError(t, err)
 	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
-		Name:        "Acme Android",
-		Platform:    enum.AppPlatformAndroid,
-		Provider:    enum.AppProviderPlayIntegrity,
-		Environment: enum.AppEnvironmentProduction,
-		PackageName: "com.acme.app",
+		Name:               "Acme Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentProduction,
+		PackageName:        "com.acme.app",
+		CloudProjectNumber: "123456789012",
 	})
 	require.NoError(t, err)
 	_, err = service.StoreAppCredential(ctx, "user_1", app.ID, projectvalidators.StoreAppCredentialRequest{

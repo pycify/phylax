@@ -158,6 +158,8 @@ definitions:
         type: string
       challenge_id:
         type: string
+      cloud_project_number:
+        type: string
       expires_at:
         type: string
       nonce:
@@ -326,6 +328,10 @@ definitions:
         maxLength: 255
         minLength: 3
         type: string
+      cloud_project_number:
+        maxLength: 32
+        minLength: 6
+        type: string
       enabled:
         type: boolean
       environment:
@@ -382,6 +388,8 @@ definitions:
   projects.ProjectAppDTO:
     properties:
       bundle_id:
+        type: string
+      cloud_project_number:
         type: string
       created_at:
         type: string
@@ -473,6 +481,10 @@ definitions:
       bundle_id:
         maxLength: 255
         minLength: 3
+        type: string
+      cloud_project_number:
+        maxLength: 32
+        minLength: 6
         type: string
       enabled:
         type: boolean

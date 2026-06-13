@@ -24,6 +24,9 @@ func TestServiceCreatesChallengeAndVerifiesMockAndroidAttestation(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	if challenge.CloudProjectNumber != "123456789012" {
+		t.Fatalf("expected cloud project number 123456789012, got %q", challenge.CloudProjectNumber)
+	}
 
 	verification, err := service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
 		AppID:       "demo",
@@ -141,6 +144,7 @@ func newTestService(t *testing.T) *Service {
 			Android: config.AndroidConfig{
 				Enabled:               true,
 				PackageName:           "com.example.demo",
+				CloudProjectNumber:    "123456789012",
 				AllowMockVerification: true,
 			},
 		},
@@ -170,6 +174,7 @@ func newRealAndroidTestService(t *testing.T, verifier PlayIntegrityVerifier) *Se
 			Android: config.AndroidConfig{
 				Enabled:                   true,
 				PackageName:               "com.example.demo",
+				CloudProjectNumber:        "123456789012",
 				RequirePlayRecognized:     true,
 				RequiredDeviceIntegrity:   []string{"MEETS_DEVICE_INTEGRITY"},
 				ExpectedCertificateSHA256: []string{"cert-digest"},

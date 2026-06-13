@@ -90,6 +90,7 @@ func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
 			Enabled:               app.Enabled,
 			Provider:              string(app.Provider),
 			PackageName:           strings.TrimSpace(app.PackageName),
+			CloudProjectNumber:    strings.TrimSpace(app.CloudProjectNumber),
 			ServiceAccountJSONEnv: "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
 			RequirePlayRecognized: true,
 			RequiredDeviceIntegrity: []string{
@@ -219,6 +220,9 @@ func (s *Service) CreateApp(ctx context.Context, ownerUserID string, projectID s
 	if err := validateAppIdentifiers(payload.Platform, payload.PackageName, payload.BundleID); err != nil {
 		return projectmodels.ProjectApp{}, err
 	}
+	if err := validateProviderConfiguration(payload.Provider, payload.CloudProjectNumber); err != nil {
+		return projectmodels.ProjectApp{}, err
+	}
 
 	enabled := true
 	if payload.Enabled != nil {
@@ -226,17 +230,18 @@ func (s *Service) CreateApp(ctx context.Context, ownerUserID string, projectID s
 	}
 	now := time.Now().UTC()
 	app := projectmodels.ProjectApp{
-		ID:          uuid.NewString(),
-		ProjectID:   projectID,
-		Name:        strings.TrimSpace(payload.Name),
-		Platform:    payload.Platform,
-		Provider:    payload.Provider,
-		Environment: payload.Environment,
-		PackageName: strings.TrimSpace(payload.PackageName),
-		BundleID:    strings.TrimSpace(payload.BundleID),
-		Enabled:     enabled,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:                 uuid.NewString(),
+		ProjectID:          projectID,
+		Name:               strings.TrimSpace(payload.Name),
+		Platform:           payload.Platform,
+		Provider:           payload.Provider,
+		Environment:        payload.Environment,
+		PackageName:        strings.TrimSpace(payload.PackageName),
+		BundleID:           strings.TrimSpace(payload.BundleID),
+		CloudProjectNumber: strings.TrimSpace(payload.CloudProjectNumber),
+		Enabled:            enabled,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 	return app, s.repository.CreateApp(ctx, app)
 }
@@ -272,10 +277,16 @@ func (s *Service) UpdateApp(ctx context.Context, ownerUserID string, appID strin
 	if strings.TrimSpace(payload.BundleID) != "" {
 		app.BundleID = strings.TrimSpace(payload.BundleID)
 	}
+	if strings.TrimSpace(payload.CloudProjectNumber) != "" {
+		app.CloudProjectNumber = strings.TrimSpace(payload.CloudProjectNumber)
+	}
 	if payload.Enabled != nil {
 		app.Enabled = *payload.Enabled
 	}
 	if err := validateAppIdentifiers(app.Platform, app.PackageName, app.BundleID); err != nil {
+		return nil, err
+	}
+	if err := validateProviderConfiguration(app.Provider, app.CloudProjectNumber); err != nil {
 		return nil, err
 	}
 	app.UpdatedAt = time.Now().UTC()
@@ -358,12 +369,15 @@ func appAttestationStatus(app projectmodels.ProjectApp, credentialConfigured boo
 	switch app.Provider {
 	case enum.AppProviderPlayIntegrity:
 		status.Identifier = strings.TrimSpace(app.PackageName)
-		status.SetupSteps = androidPlayIntegritySetupSteps(status.Identifier, credentialConfigured)
+		status.SetupSteps = androidPlayIntegritySetupSteps(status.Identifier, app.CloudProjectNumber, credentialConfigured)
 		if app.Platform != enum.AppPlatformAndroid {
 			status.Issues = append(status.Issues, "Play Integrity requires an Android app")
 		}
 		if status.Identifier == "" {
 			status.Issues = append(status.Issues, "package_name is required for Play Integrity")
+		}
+		if strings.TrimSpace(app.CloudProjectNumber) == "" {
+			status.Issues = append(status.Issues, "cloud_project_number is required for Play Integrity")
 		}
 	case enum.AppProviderAppAttest:
 		status.Identifier = strings.TrimSpace(app.BundleID)
@@ -393,7 +407,7 @@ func appAttestationStatus(app projectmodels.ProjectApp, credentialConfigured boo
 	return status
 }
 
-func androidPlayIntegritySetupSteps(packageName string, credentialConfigured bool) []AppSetupStep {
+func androidPlayIntegritySetupSteps(packageName string, cloudProjectNumber string, credentialConfigured bool) []AppSetupStep {
 	credentialStatus := "pending"
 	credentialDetails := "No active encrypted Google service account credential is stored for this app."
 	if credentialConfigured {
@@ -409,6 +423,13 @@ func androidPlayIntegritySetupSteps(packageName string, credentialConfigured boo
 	if strings.TrimSpace(packageName) == "" {
 		identifierStatus = "pending"
 		identifierDetails = "Add the Android package name to this Phylax app."
+	}
+
+	cloudProjectStatus := "completed"
+	cloudProjectDetails := "Google Cloud project number is present on the Phylax app record."
+	if strings.TrimSpace(cloudProjectNumber) == "" {
+		cloudProjectStatus = "pending"
+		cloudProjectDetails = "Add the Google Cloud project number used for Play Integrity token requests."
 	}
 
 	return []AppSetupStep{
@@ -429,11 +450,11 @@ func androidPlayIntegritySetupSteps(packageName string, credentialConfigured boo
 		},
 		{
 			Key:                "google_cloud_project",
-			Title:              "Create or select a Google Cloud project",
-			Status:             "manual",
-			VerificationMethod: "manual",
-			Details:            "Google requires a Cloud project for Play Integrity. Phylax cannot infer this from the package name alone.",
-			Action:             "Use the Cloud project that will own Play Integrity API access and service account credentials.",
+			Title:              "Configure Google Cloud project number",
+			Status:             cloudProjectStatus,
+			VerificationMethod: "database",
+			Details:            cloudProjectDetails,
+			Action:             "Set cloud_project_number to the numeric Google Cloud project number linked to Play Integrity.",
 			DocsURL:            "https://developer.android.com/google/play/integrity/setup",
 		},
 		{
@@ -642,6 +663,13 @@ func validateAppIdentifiers(platform enum.AppPlatform, packageName string, bundl
 		}
 	default:
 		return fmt.Errorf("%w: unsupported platform", ErrInvalidApp)
+	}
+	return nil
+}
+
+func validateProviderConfiguration(provider enum.AppProvider, cloudProjectNumber string) error {
+	if provider == enum.AppProviderPlayIntegrity && strings.TrimSpace(cloudProjectNumber) == "" {
+		return fmt.Errorf("%w: play_integrity apps require cloud_project_number", ErrInvalidApp)
 	}
 	return nil
 }

@@ -31,17 +31,18 @@ func NewProjectDTO(project projectmodels.Project) ProjectDTO {
 }
 
 type ProjectAppDTO struct {
-	ID          string              `json:"id"`
-	ProjectID   string              `json:"project_id"`
-	Name        string              `json:"name"`
-	Platform    enum.AppPlatform    `json:"platform"`
-	Provider    enum.AppProvider    `json:"provider"`
-	Environment enum.AppEnvironment `json:"environment"`
-	PackageName string              `json:"package_name,omitempty"`
-	BundleID    string              `json:"bundle_id,omitempty"`
-	Enabled     bool                `json:"enabled"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
+	ID                 string              `json:"id"`
+	ProjectID          string              `json:"project_id"`
+	Name               string              `json:"name"`
+	Platform           enum.AppPlatform    `json:"platform"`
+	Provider           enum.AppProvider    `json:"provider"`
+	Environment        enum.AppEnvironment `json:"environment"`
+	PackageName        string              `json:"package_name,omitempty"`
+	BundleID           string              `json:"bundle_id,omitempty"`
+	CloudProjectNumber string              `json:"cloud_project_number,omitempty"`
+	Enabled            bool                `json:"enabled"`
+	CreatedAt          time.Time           `json:"created_at"`
+	UpdatedAt          time.Time           `json:"updated_at"`
 }
 
 type AppCredentialDTO struct {
@@ -57,17 +58,18 @@ type AppCredentialDTO struct {
 
 func NewProjectAppDTO(app projectmodels.ProjectApp) ProjectAppDTO {
 	return ProjectAppDTO{
-		ID:          app.ID,
-		ProjectID:   app.ProjectID,
-		Name:        app.Name,
-		Platform:    app.Platform,
-		Provider:    app.Provider,
-		Environment: app.Environment,
-		PackageName: app.PackageName,
-		BundleID:    app.BundleID,
-		Enabled:     app.Enabled,
-		CreatedAt:   app.CreatedAt,
-		UpdatedAt:   app.UpdatedAt,
+		ID:                 app.ID,
+		ProjectID:          app.ProjectID,
+		Name:               app.Name,
+		Platform:           app.Platform,
+		Provider:           app.Provider,
+		Environment:        app.Environment,
+		PackageName:        app.PackageName,
+		BundleID:           app.BundleID,
+		CloudProjectNumber: app.CloudProjectNumber,
+		Enabled:            app.Enabled,
+		CreatedAt:          app.CreatedAt,
+		UpdatedAt:          app.UpdatedAt,
 	}
 }
 

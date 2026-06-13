@@ -65,6 +65,7 @@ type AndroidConfig struct {
 	Enabled                    bool     `json:"enabled" mapstructure:"enabled"`
 	Provider                   string   `json:"provider" mapstructure:"provider"`
 	PackageName                string   `json:"package_name" mapstructure:"package_name"`
+	CloudProjectNumber         string   `json:"cloud_project_number" mapstructure:"cloud_project_number"`
 	ServiceAccountJSON         string   `json:"-" mapstructure:"-"`
 	ServiceAccountJSONEnv      string   `json:"service_account_json_env" mapstructure:"service_account_json_env"`
 	RequirePlayRecognized      bool     `json:"require_play_recognized" mapstructure:"require_play_recognized"`

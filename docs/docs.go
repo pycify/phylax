@@ -1063,6 +1063,9 @@ const docTemplate = `{
                 "challenge_id": {
                     "type": "string"
                 },
+                "cloud_project_number": {
+                    "type": "string"
+                },
                 "expires_at": {
                     "type": "string"
                 },
@@ -1322,6 +1325,11 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 3
                 },
+                "cloud_project_number": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 6
+                },
                 "enabled": {
                     "type": "boolean"
                 },
@@ -1399,6 +1407,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bundle_id": {
+                    "type": "string"
+                },
+                "cloud_project_number": {
                     "type": "string"
                 },
                 "created_at": {
@@ -1538,6 +1549,11 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 3
+                },
+                "cloud_project_number": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "minLength": 6
                 },
                 "enabled": {
                     "type": "boolean"

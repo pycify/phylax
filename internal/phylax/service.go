@@ -86,12 +86,13 @@ func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeReques
 		return CreateChallengeResponse{}, err
 	}
 	return CreateChallengeResponse{
-		ChallengeID: challenge.ID,
-		AppID:       challenge.AppID,
-		Platform:    challenge.Platform,
-		Action:      challenge.Action,
-		Nonce:       challenge.Nonce,
-		ExpiresAt:   challenge.ExpiresAt,
+		ChallengeID:        challenge.ID,
+		AppID:              challenge.AppID,
+		Platform:           challenge.Platform,
+		Action:             challenge.Action,
+		Nonce:              challenge.Nonce,
+		CloudProjectNumber: app.Android.CloudProjectNumber,
+		ExpiresAt:          challenge.ExpiresAt,
 	}, nil
 }
 

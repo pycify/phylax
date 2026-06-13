@@ -38,6 +38,7 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 		"action":     "ai.ask",
 		"install_id": "install_123",
 	}, http.StatusCreated)
+	require.Equal(t, "123456789012", challenge.CloudProjectNumber)
 
 	verified := postJSONEnvelope[phylax.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/verify", map[string]any{
 		"challenge_id": challenge.ChallengeID,
@@ -139,6 +140,7 @@ func newTestRouter(t *testing.T) http.Handler {
 			Android: config.AndroidConfig{
 				Enabled:               true,
 				PackageName:           "com.example.demo",
+				CloudProjectNumber:    "123456789012",
 				AllowMockVerification: true,
 			},
 		},

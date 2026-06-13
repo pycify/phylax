@@ -64,12 +64,13 @@ type CreateChallengeRequest struct {
 }
 
 type CreateChallengeResponse struct {
-	ChallengeID string    `json:"challenge_id"`
-	AppID       string    `json:"app_id"`
-	Platform    Platform  `json:"platform"`
-	Action      string    `json:"action"`
-	Nonce       string    `json:"nonce"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	ChallengeID        string    `json:"challenge_id"`
+	AppID              string    `json:"app_id"`
+	Platform           Platform  `json:"platform"`
+	Action             string    `json:"action"`
+	Nonce              string    `json:"nonce"`
+	CloudProjectNumber string    `json:"cloud_project_number,omitempty"`
+	ExpiresAt          time.Time `json:"expires_at"`
 }
 
 type VerifyAttestationRequest struct {
