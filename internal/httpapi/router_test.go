@@ -60,6 +60,26 @@ func TestRouterValidatesChallengePayload(t *testing.T) {
 	}, http.StatusUnprocessableEntity)
 }
 
+func TestRouterHandlesCORSPreflight(t *testing.T) {
+	server := httptest.NewServer(newTestRouter(t))
+	defer server.Close()
+
+	req, err := http.NewRequest(http.MethodOptions, server.URL+"/v1/health", nil)
+	require.NoError(t, err)
+	req.Header.Set("Origin", "http://localhost:5173")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	req.Header.Set("Access-Control-Request-Headers", "authorization,content-type")
+
+	response, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer response.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, response.StatusCode)
+	require.Equal(t, "*", response.Header.Get("Access-Control-Allow-Origin"))
+	require.Contains(t, response.Header.Get("Access-Control-Allow-Methods"), http.MethodPost)
+	require.Contains(t, response.Header.Get("Access-Control-Allow-Headers"), "Authorization")
+}
+
 func postJSON[T any](t *testing.T, url string, payload map[string]any, expectedStatus int) T {
 	t.Helper()
 	body, err := json.Marshal(payload)

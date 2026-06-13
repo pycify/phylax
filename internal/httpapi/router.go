@@ -39,8 +39,8 @@ func NewRouter(
 }
 
 func (r *Router) routes() {
+	r.router.Use(cors)
 	r.router.Use(chimiddleware.RequestID)
-	r.router.Use(chimiddleware.RealIP)
 	r.router.Use(chimiddleware.Recoverer)
 
 	r.router.Get("/swagger/*", httpSwagger.Handler(
@@ -74,5 +74,21 @@ func (r *Router) health(w http.ResponseWriter, _ *http.Request) {
 	helper.WriteJSON(w, http.StatusOK, HealthResponse{
 		OK:      true,
 		Service: "phylax",
+	})
+}
+
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "600")
+
+		if req.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, req)
 	})
 }
