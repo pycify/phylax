@@ -25,6 +25,8 @@ RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=builder /app/phylax ./phylax
 
+COPY certs ./certs
+
 # Runtime files your app may need
 COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/database ./database
