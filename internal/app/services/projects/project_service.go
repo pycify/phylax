@@ -68,7 +68,6 @@ func (s *Service) ResolveApp(ctx context.Context, appID string) (config.AppConfi
 			switch app.Provider {
 			case enum.AppProviderPlayIntegrity:
 				cfg.Android.ServiceAccountJSON = secret
-				cfg.Android.ServiceAccountJSONEnv = ""
 			case enum.AppProviderAppAttest:
 				cfg.Apple.TeamID = secret
 			}
@@ -87,12 +86,13 @@ func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
 	switch app.Provider {
 	case enum.AppProviderPlayIntegrity:
 		cfg.Android = config.AndroidConfig{
-			Enabled:               app.Enabled,
-			Provider:              string(app.Provider),
-			PackageName:           strings.TrimSpace(app.PackageName),
-			CloudProjectNumber:    strings.TrimSpace(app.CloudProjectNumber),
-			ServiceAccountJSONEnv: "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
-			RequirePlayRecognized: true,
+			Enabled:            app.Enabled,
+			Provider:           string(app.Provider),
+			PackageName:        strings.TrimSpace(app.PackageName),
+			CloudProjectNumber: strings.TrimSpace(app.CloudProjectNumber),
+			// Keep strict Play recognition checks for production while allowing
+			// debug/internal testing builds in non-production environments.
+			RequirePlayRecognized: app.Environment == enum.AppEnvironmentProduction,
 			RequiredDeviceIntegrity: []string{
 				"MEETS_DEVICE_INTEGRITY",
 			},
@@ -413,9 +413,6 @@ func androidPlayIntegritySetupSteps(packageName string, cloudProjectNumber strin
 	if credentialConfigured {
 		credentialStatus = "completed"
 		credentialDetails = "An active encrypted Google service account credential is stored for this app."
-	} else if strings.TrimSpace(os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")) != "" {
-		credentialStatus = "completed"
-		credentialDetails = "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend as a development fallback."
 	}
 
 	identifierStatus := "completed"

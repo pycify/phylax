@@ -2,14 +2,16 @@ package phylax
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pycify/phylax/internal/config"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/playintegrity/v1"
 )
@@ -23,18 +25,21 @@ type GooglePlayIntegrityVerifier struct{}
 func (GooglePlayIntegrityVerifier) Decode(ctx context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error) {
 	credentialsJSON := strings.TrimSpace(app.Android.ServiceAccountJSON)
 	if credentialsJSON == "" {
-		if app.Android.ServiceAccountJSONEnv == "" {
-			return nil, errors.New("android service account JSON is required for Play Integrity verification")
-		}
-		credentialsJSON = strings.TrimSpace(os.Getenv(app.Android.ServiceAccountJSONEnv))
-		if credentialsJSON == "" {
-			return nil, fmt.Errorf("service account env %q is not set", app.Android.ServiceAccountJSONEnv)
-		}
+		return nil, errors.New("android service account JSON is required for Play Integrity verification")
+	}
+
+	creds, err := google.CredentialsFromJSONWithTypeAndParams(
+		ctx,
+		[]byte(credentialsJSON),
+		google.ServiceAccount,
+		google.CredentialsParams{Scopes: []string{playintegrity.PlayintegrityScope}},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	service, err := playintegrity.NewService(ctx,
-		option.WithCredentialsJSON([]byte(credentialsJSON)),
-		option.WithScopes(playintegrity.PlayintegrityScope),
+		option.WithCredentials(creds),
 	)
 	if err != nil {
 		return nil, err
@@ -44,6 +49,12 @@ func (GooglePlayIntegrityVerifier) Decode(ctx context.Context, app config.AppCon
 		IntegrityToken: integrityToken,
 	}).Context(ctx).Do()
 	if err != nil {
+		var gerr *googleapi.Error
+		if errors.As(err, &gerr) && gerr.Code == 403 {
+			if strings.Contains(strings.ToLower(gerr.Message), "not authorized to decode") {
+				return nil, fmt.Errorf("play integrity decode forbidden: ensure the app is linked to the same Google Cloud project number, Play Integrity API is enabled in that project, and the configured service account has permission to decode tokens")
+			}
+		}
 		return nil, err
 	}
 	if response == nil || response.TokenPayloadExternal == nil {
@@ -98,6 +109,7 @@ func (p AndroidProvider) Verify(ctx context.Context, app config.AppConfig, chall
 		return Verdict{}, err
 	}
 	if err := validatePlayIntegrityPayload(app, challenge, payload); err != nil {
+		println("Play Integrity token decode error:", err.Error()) // Log the error for debugging
 		return Verdict{}, err
 	}
 
@@ -239,6 +251,46 @@ func hasAnyPrefix(value string, prefixes []string) bool {
 		}
 	}
 	return false
+}
+
+func equivalentNonce(actual string, expected string) bool {
+	if actual == expected {
+		return true
+	}
+	actualNormalized, okActual := normalizeNonce(actual)
+	expectedNormalized, okExpected := normalizeNonce(expected)
+	if !okActual || !okExpected {
+		return false
+	}
+	return actualNormalized == expectedNormalized
+}
+
+func normalizeNonce(value string) (string, bool) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return "", false
+	}
+	if decoded, err := base64.RawURLEncoding.DecodeString(trimmed); err == nil {
+		return base64.RawURLEncoding.EncodeToString(decoded), true
+	}
+	if decoded, err := base64.URLEncoding.DecodeString(trimmed); err == nil {
+		return base64.RawURLEncoding.EncodeToString(decoded), true
+	}
+	if decoded, err := base64.StdEncoding.DecodeString(trimmed); err == nil {
+		return base64.RawURLEncoding.EncodeToString(decoded), true
+	}
+	return "", false
+}
+
+func maskValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if len(trimmed) <= 8 {
+		return "***"
+	}
+	return trimmed[:4] + "..." + trimmed[len(trimmed)-4:]
 }
 
 type AppleProvider struct{}
