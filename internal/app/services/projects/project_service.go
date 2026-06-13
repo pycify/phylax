@@ -31,8 +31,10 @@ type Repository interface {
 	CreateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	ListApps(ctx context.Context, projectID string) ([]projectmodels.ProjectApp, error)
 	FindApp(ctx context.Context, projectID string, appID string) (*projectmodels.ProjectApp, error)
+	FindAppForOwner(ctx context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error)
 	UpdateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	DeleteApp(ctx context.Context, projectID string, appID string) error
+	DeleteAppForOwner(ctx context.Context, ownerUserID string, appID string) error
 }
 
 type Service struct {
@@ -124,18 +126,12 @@ func (s *Service) ListApps(ctx context.Context, ownerUserID string, projectID st
 	return s.repository.ListApps(ctx, projectID)
 }
 
-func (s *Service) GetApp(ctx context.Context, ownerUserID string, projectID string, appID string) (*projectmodels.ProjectApp, error) {
-	if _, err := s.repository.FindProject(ctx, ownerUserID, projectID); err != nil {
-		return nil, err
-	}
-	return s.repository.FindApp(ctx, projectID, appID)
+func (s *Service) GetApp(ctx context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error) {
+	return s.repository.FindAppForOwner(ctx, ownerUserID, appID)
 }
 
-func (s *Service) UpdateApp(ctx context.Context, ownerUserID string, projectID string, appID string, payload projectvalidators.UpdateProjectAppRequest) (*projectmodels.ProjectApp, error) {
-	if _, err := s.repository.FindProject(ctx, ownerUserID, projectID); err != nil {
-		return nil, err
-	}
-	app, err := s.repository.FindApp(ctx, projectID, appID)
+func (s *Service) UpdateApp(ctx context.Context, ownerUserID string, appID string, payload projectvalidators.UpdateProjectAppRequest) (*projectmodels.ProjectApp, error) {
+	app, err := s.repository.FindAppForOwner(ctx, ownerUserID, appID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +170,10 @@ func (s *Service) DeleteApp(ctx context.Context, ownerUserID string, projectID s
 	return s.repository.DeleteApp(ctx, projectID, appID)
 }
 
+func (s *Service) DeleteAppByID(ctx context.Context, ownerUserID string, appID string) error {
+	return s.repository.DeleteAppForOwner(ctx, ownerUserID, appID)
+}
+
 type AppAttestationStatus struct {
 	AppID                        string
 	Platform                     enum.AppPlatform
@@ -187,11 +187,8 @@ type AppAttestationStatus struct {
 	NextSteps                    []string
 }
 
-func (s *Service) GetAppAttestationStatus(ctx context.Context, ownerUserID string, projectID string, appID string) (*AppAttestationStatus, error) {
-	if _, err := s.repository.FindProject(ctx, ownerUserID, projectID); err != nil {
-		return nil, err
-	}
-	app, err := s.repository.FindApp(ctx, projectID, appID)
+func (s *Service) GetAppAttestationStatus(ctx context.Context, ownerUserID string, appID string) (*AppAttestationStatus, error) {
+	app, err := s.repository.FindAppForOwner(ctx, ownerUserID, appID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +204,7 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 		Provider:                     app.Provider,
 		Enabled:                      app.Enabled,
 		RequiresDeveloperCredentials: true,
-		ExternalConfigurationCheck:    "not_configured",
+		ExternalConfigurationCheck:   "not_configured",
 	}
 
 	if !app.Enabled {
@@ -350,6 +347,21 @@ func (r *GormRepository) FindApp(ctx context.Context, projectID string, appID st
 	return &app, nil
 }
 
+func (r *GormRepository) FindAppForOwner(ctx context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error) {
+	var app projectmodels.ProjectApp
+	err := r.db.WithContext(ctx).
+		Joins("join projects on projects.id = project_apps.project_id").
+		Where("project_apps.id = ? and projects.owner_user_id = ? and projects.deleted_at is null", appID, ownerUserID).
+		First(&app).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAppNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &app, nil
+}
+
 func (r *GormRepository) UpdateApp(ctx context.Context, app projectmodels.ProjectApp) error {
 	return r.db.WithContext(ctx).Save(&app).Error
 }
@@ -363,4 +375,12 @@ func (r *GormRepository) DeleteApp(ctx context.Context, projectID string, appID 
 		return ErrAppNotFound
 	}
 	return nil
+}
+
+func (r *GormRepository) DeleteAppForOwner(ctx context.Context, ownerUserID string, appID string) error {
+	app, err := r.FindAppForOwner(ctx, ownerUserID, appID)
+	if err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Delete(app).Error
 }

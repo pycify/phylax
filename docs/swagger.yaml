@@ -613,6 +613,106 @@ info:
   title: Phylax API
   version: 0.1.0
 paths:
+  /v1/apps/{app_id}:
+    delete:
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Soft delete project app
+      tags:
+      - Project Apps
+    get:
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ProjectAppResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get project app
+      tags:
+      - Project Apps
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      - description: App payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/projects.UpdateProjectAppRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ProjectAppResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update project app
+      tags:
+      - Project Apps
+  /v1/apps/{app_id}/attestation-status:
+    get:
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.AppAttestationStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get project app attestation status
+      tags:
+      - Project Apps
   /v1/attestations/verify:
     post:
       consumes:
@@ -947,126 +1047,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create project app
-      tags:
-      - Project Apps
-  /v1/projects/{project_id}/apps/{app_id}:
-    delete:
-      parameters:
-      - description: Project id
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: App id
-        in: path
-        name: app_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Soft delete project app
-      tags:
-      - Project Apps
-    get:
-      parameters:
-      - description: Project id
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: App id
-        in: path
-        name: app_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.ProjectAppResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get project app
-      tags:
-      - Project Apps
-    patch:
-      consumes:
-      - application/json
-      parameters:
-      - description: Project id
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: App id
-        in: path
-        name: app_id
-        required: true
-        type: string
-      - description: App payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/projects.UpdateProjectAppRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.ProjectAppResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update project app
-      tags:
-      - Project Apps
-  /v1/projects/{project_id}/apps/{app_id}/attestation-status:
-    get:
-      parameters:
-      - description: Project id
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: App id
-        in: path
-        name: app_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.AppAttestationStatusResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get project app attestation status
       tags:
       - Project Apps
   /v1/sessions/introspect:

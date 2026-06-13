@@ -18,9 +18,13 @@ func RegisterProjectRoutes(router chi.Router, controller *controllers.ProjectCon
 
 		router.Get("/{project_id}/apps", controller.ListProjectApps)
 		router.Post("/{project_id}/apps", controller.CreateProjectApp)
-		router.Get("/{project_id}/apps/{app_id}", controller.GetProjectApp)
-		router.Patch("/{project_id}/apps/{app_id}", controller.UpdateProjectApp)
-		router.Delete("/{project_id}/apps/{app_id}", controller.DeleteProjectApp)
-		router.Get("/{project_id}/apps/{app_id}/attestation-status", controller.GetProjectAppAttestationStatus)
+	})
+
+	router.Route("/v1/apps", func(router chi.Router) {
+		router.Use(middleware.Auth(authService))
+		router.Get("/{app_id}", controller.GetProjectApp)
+		router.Patch("/{app_id}", controller.UpdateProjectApp)
+		router.Delete("/{app_id}", controller.DeleteProjectApp)
+		router.Get("/{app_id}/attestation-status", controller.GetProjectAppAttestationStatus)
 	})
 }

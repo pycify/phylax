@@ -31,7 +31,7 @@
         "enabled": true,
         "provider": "play_integrity",
         "package_name": "com.example.demo",
-        "allow_mock_verification": true,
+        "allow_mock_verification": false,
         "require_play_recognized": true,
         "required_device_integrity": [
           "MEETS_DEVICE_INTEGRITY"
@@ -43,7 +43,7 @@
         "bundle_id": "com.example.demo",
         "team_id": "ABCDE12345",
         "environment": "development",
-        "allow_mock_verification": true
+        "allow_mock_verification": false
       },
       "firebase": {
         "enabled": false,

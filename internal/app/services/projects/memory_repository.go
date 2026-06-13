@@ -110,6 +110,20 @@ func (r *MemoryRepository) FindApp(_ context.Context, projectID string, appID st
 	return &app, nil
 }
 
+func (r *MemoryRepository) FindAppForOwner(_ context.Context, ownerUserID string, appID string) (*projectmodels.ProjectApp, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	app, ok := r.apps[appID]
+	if !ok || !app.DeletedAt.Time.IsZero() {
+		return nil, ErrAppNotFound
+	}
+	project, ok := r.projects[app.ProjectID]
+	if !ok || project.OwnerUserID != ownerUserID || !project.DeletedAt.Time.IsZero() {
+		return nil, ErrAppNotFound
+	}
+	return &app, nil
+}
+
 func (r *MemoryRepository) UpdateApp(_ context.Context, app projectmodels.ProjectApp) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -125,6 +139,24 @@ func (r *MemoryRepository) DeleteApp(_ context.Context, projectID string, appID 
 	defer r.mu.Unlock()
 	app, ok := r.apps[appID]
 	if !ok || app.ProjectID != projectID || !app.DeletedAt.Time.IsZero() {
+		return ErrAppNotFound
+	}
+	now := time.Now().UTC()
+	app.DeletedAt.Time = now
+	app.DeletedAt.Valid = true
+	r.apps[appID] = app
+	return nil
+}
+
+func (r *MemoryRepository) DeleteAppForOwner(_ context.Context, ownerUserID string, appID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	app, ok := r.apps[appID]
+	if !ok || !app.DeletedAt.Time.IsZero() {
+		return ErrAppNotFound
+	}
+	project, ok := r.projects[app.ProjectID]
+	if !ok || project.OwnerUserID != ownerUserID || !project.DeletedAt.Time.IsZero() {
 		return ErrAppNotFound
 	}
 	now := time.Now().UTC()

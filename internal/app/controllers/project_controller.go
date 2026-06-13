@@ -213,17 +213,16 @@ func (c *ProjectController) ListProjectApps(w http.ResponseWriter, req *http.Req
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		project_id			path		string	true	"Project id"
 //	@Param		app_id				path		string	true	"App id"
 //	@Success	200					{object}	response.ProjectAppResponse
 //	@Failure	404					{object}	response.ErrorResponse
-//	@Router		/v1/projects/{project_id}/apps/{app_id} [get]
+//	@Router		/v1/apps/{app_id} [get]
 func (c *ProjectController) GetProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {
 		return
 	}
-	app, err := c.service.GetApp(req.Context(), userID, chi.URLParam(req, "project_id"), chi.URLParam(req, "app_id"))
+	app, err := c.service.GetApp(req.Context(), userID, chi.URLParam(req, "app_id"))
 	if err != nil {
 		helper.WriteServiceError(w, err)
 		return
@@ -238,12 +237,11 @@ func (c *ProjectController) GetProjectApp(w http.ResponseWriter, req *http.Reque
 //	@Accept		json
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		project_id			path		string									true	"Project id"
 //	@Param		app_id				path		string									true	"App id"
 //	@Param		payload				body		projects.UpdateProjectAppRequest		true	"App payload"
 //	@Success	200					{object}	response.ProjectAppResponse
 //	@Failure	404					{object}	response.ErrorResponse
-//	@Router		/v1/projects/{project_id}/apps/{app_id} [patch]
+//	@Router		/v1/apps/{app_id} [patch]
 func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {
@@ -253,7 +251,7 @@ func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Re
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
-	app, err := c.service.UpdateApp(req.Context(), userID, chi.URLParam(req, "project_id"), chi.URLParam(req, "app_id"), payload)
+	app, err := c.service.UpdateApp(req.Context(), userID, chi.URLParam(req, "app_id"), payload)
 	if err != nil {
 		helper.WriteServiceError(w, err)
 		return
@@ -267,17 +265,16 @@ func (c *ProjectController) UpdateProjectApp(w http.ResponseWriter, req *http.Re
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		project_id			path	string	true	"Project id"
 //	@Param		app_id				path	string	true	"App id"
 //	@Success	204
 //	@Failure	404	{object}	response.ErrorResponse
-//	@Router		/v1/projects/{project_id}/apps/{app_id} [delete]
+//	@Router		/v1/apps/{app_id} [delete]
 func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {
 		return
 	}
-	if err := c.service.DeleteApp(req.Context(), userID, chi.URLParam(req, "project_id"), chi.URLParam(req, "app_id")); err != nil {
+	if err := c.service.DeleteAppByID(req.Context(), userID, chi.URLParam(req, "app_id")); err != nil {
 		helper.WriteServiceError(w, err)
 		return
 	}
@@ -290,17 +287,16 @@ func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Re
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
-//	@Param		project_id			path		string	true	"Project id"
 //	@Param		app_id				path		string	true	"App id"
 //	@Success	200					{object}	response.AppAttestationStatusResponse
 //	@Failure	404					{object}	response.ErrorResponse
-//	@Router		/v1/projects/{project_id}/apps/{app_id}/attestation-status [get]
+//	@Router		/v1/apps/{app_id}/attestation-status [get]
 func (c *ProjectController) GetProjectAppAttestationStatus(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {
 		return
 	}
-	status, err := c.service.GetAppAttestationStatus(req.Context(), userID, chi.URLParam(req, "project_id"), chi.URLParam(req, "app_id"))
+	status, err := c.service.GetAppAttestationStatus(req.Context(), userID, chi.URLParam(req, "app_id"))
 	if err != nil {
 		helper.WriteServiceError(w, err)
 		return

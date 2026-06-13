@@ -59,6 +59,32 @@ func TestProjectServiceEnforcesOwnership(t *testing.T) {
 	require.ErrorIs(t, err, ErrProjectNotFound)
 }
 
+func TestProjectServiceFindsAppsByIDWithinOwnerScope(t *testing.T) {
+	service := NewService(NewMemoryRepository())
+	ctx := context.Background()
+
+	project, err := service.CreateProject(ctx, "owner", projectvalidators.CreateProjectRequest{
+		Name: "Owned",
+		Slug: "owned",
+	})
+	require.NoError(t, err)
+	app, err := service.CreateApp(ctx, "owner", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Owned Android",
+		Platform:    enum.AppPlatformAndroid,
+		Provider:    enum.AppProviderPlayIntegrity,
+		Environment: enum.AppEnvironmentDevelopment,
+		PackageName: "com.acme.app",
+	})
+	require.NoError(t, err)
+
+	found, err := service.GetApp(ctx, "owner", app.ID)
+	require.NoError(t, err)
+	require.Equal(t, app.ID, found.ID)
+
+	_, err = service.GetApp(ctx, "other_user", app.ID)
+	require.ErrorIs(t, err, ErrAppNotFound)
+}
+
 func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()
@@ -97,7 +123,7 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	status, err := service.GetAppAttestationStatus(ctx, "user_1", project.ID, app.ID)
+	status, err := service.GetAppAttestationStatus(ctx, "user_1", app.ID)
 	require.NoError(t, err)
 	require.True(t, status.Configured)
 	require.True(t, status.RequiresDeveloperCredentials)
@@ -127,6 +153,6 @@ func TestProjectServiceSoftDeletesAppsThroughProjectDelete(t *testing.T) {
 	require.NoError(t, service.DeleteProject(ctx, "user_1", project.ID))
 	_, err = service.GetProject(ctx, "user_1", project.ID)
 	require.ErrorIs(t, err, ErrProjectNotFound)
-	_, err = service.GetApp(ctx, "user_1", project.ID, app.ID)
-	require.ErrorIs(t, err, ErrProjectNotFound)
+	_, err = service.GetApp(ctx, "user_1", app.ID)
+	require.ErrorIs(t, err, ErrAppNotFound)
 }
