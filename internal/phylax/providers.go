@@ -21,12 +21,15 @@ type PlayIntegrityVerifier interface {
 type GooglePlayIntegrityVerifier struct{}
 
 func (GooglePlayIntegrityVerifier) Decode(ctx context.Context, app config.AppConfig, integrityToken string) (*playintegrity.TokenPayloadExternal, error) {
-	if app.Android.ServiceAccountJSONEnv == "" {
-		return nil, errors.New("android.service_account_json_env is required for Play Integrity verification")
-	}
-	credentialsJSON := strings.TrimSpace(os.Getenv(app.Android.ServiceAccountJSONEnv))
+	credentialsJSON := strings.TrimSpace(app.Android.ServiceAccountJSON)
 	if credentialsJSON == "" {
-		return nil, fmt.Errorf("service account env %q is not set", app.Android.ServiceAccountJSONEnv)
+		if app.Android.ServiceAccountJSONEnv == "" {
+			return nil, errors.New("android service account JSON is required for Play Integrity verification")
+		}
+		credentialsJSON = strings.TrimSpace(os.Getenv(app.Android.ServiceAccountJSONEnv))
+		if credentialsJSON == "" {
+			return nil, fmt.Errorf("service account env %q is not set", app.Android.ServiceAccountJSONEnv)
+		}
 	}
 
 	service, err := playintegrity.NewService(ctx,

@@ -56,8 +56,8 @@ type Verdict struct {
 }
 
 type CreateChallengeRequest struct {
-	AppID     string   `json:"app_id" validate:"required"`
-	Platform  Platform `json:"platform" validate:"required,oneof=android apple firebase"`
+	AppID     string   `json:"-"`
+	Platform  Platform `json:"-"`
 	Action    string   `json:"action" validate:"required"`
 	InstallID string   `json:"install_id" validate:"required"`
 	Subject   string   `json:"subject,omitempty"`

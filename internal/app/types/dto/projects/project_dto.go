@@ -44,6 +44,17 @@ type ProjectAppDTO struct {
 	UpdatedAt   time.Time           `json:"updated_at"`
 }
 
+type AppCredentialDTO struct {
+	ID             string           `json:"id"`
+	AppID          string           `json:"app_id"`
+	Provider       enum.AppProvider `json:"provider"`
+	CredentialType string           `json:"credential_type"`
+	SecretSHA256   string           `json:"secret_sha256"`
+	Active         bool             `json:"active"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+}
+
 func NewProjectAppDTO(app projectmodels.ProjectApp) ProjectAppDTO {
 	return ProjectAppDTO{
 		ID:          app.ID,
@@ -60,6 +71,19 @@ func NewProjectAppDTO(app projectmodels.ProjectApp) ProjectAppDTO {
 	}
 }
 
+func NewAppCredentialDTO(credential projectmodels.AppCredential) AppCredentialDTO {
+	return AppCredentialDTO{
+		ID:             credential.ID,
+		AppID:          credential.AppID,
+		Provider:       credential.Provider,
+		CredentialType: credential.CredentialType,
+		SecretSHA256:   credential.SecretSHA256,
+		Active:         credential.Active,
+		CreatedAt:      credential.CreatedAt,
+		UpdatedAt:      credential.UpdatedAt,
+	}
+}
+
 type ProjectResponse struct {
 	Project ProjectDTO `json:"project"`
 }
@@ -70,6 +94,10 @@ type ProjectsResponse struct {
 
 type ProjectAppResponse struct {
 	App ProjectAppDTO `json:"app"`
+}
+
+type AppCredentialResponse struct {
+	Credential AppCredentialDTO `json:"credential"`
 }
 
 type ProjectAppsResponse struct {

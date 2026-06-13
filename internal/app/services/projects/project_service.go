@@ -2,8 +2,15 @@ package projects
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -18,9 +25,11 @@ import (
 )
 
 var (
-	ErrProjectNotFound = errors.New("project not found")
-	ErrAppNotFound     = errors.New("app not found")
-	ErrInvalidApp      = errors.New("invalid app")
+	ErrProjectNotFound       = errors.New("project not found")
+	ErrAppNotFound           = errors.New("app not found")
+	ErrAppCredentialNotFound = errors.New("app credential not found")
+	ErrInvalidApp            = errors.New("invalid app")
+	ErrInvalidCredential     = errors.New("invalid app credential")
 )
 
 type Repository interface {
@@ -38,6 +47,8 @@ type Repository interface {
 	UpdateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	DeleteApp(ctx context.Context, projectID string, appID string) error
 	DeleteAppForOwner(ctx context.Context, ownerUserID string, appID string) error
+	UpsertAppCredential(ctx context.Context, credential projectmodels.AppCredential) error
+	FindActiveAppCredential(ctx context.Context, appID string, provider enum.AppProvider, credentialType string) (*projectmodels.AppCredential, error)
 }
 
 func (s *Service) ResolveApp(ctx context.Context, appID string) (config.AppConfig, error) {
@@ -45,7 +56,27 @@ func (s *Service) ResolveApp(ctx context.Context, appID string) (config.AppConfi
 	if err != nil {
 		return config.AppConfig{}, err
 	}
-	return appConfigFromProjectApp(*app), nil
+	cfg := appConfigFromProjectApp(*app)
+	credentialType := credentialTypeForProvider(app.Provider)
+	if credentialType != "" {
+		credential, err := s.repository.FindActiveAppCredential(ctx, app.ID, app.Provider, credentialType)
+		if err == nil {
+			secret, err := decryptCredentialSecret(*credential)
+			if err != nil {
+				return config.AppConfig{}, err
+			}
+			switch app.Provider {
+			case enum.AppProviderPlayIntegrity:
+				cfg.Android.ServiceAccountJSON = secret
+				cfg.Android.ServiceAccountJSONEnv = ""
+			case enum.AppProviderAppAttest:
+				cfg.Apple.TeamID = secret
+			}
+		} else if !errors.Is(err, ErrAppCredentialNotFound) {
+			return config.AppConfig{}, err
+		}
+	}
+	return cfg, nil
 }
 
 func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
@@ -98,6 +129,42 @@ type Service struct {
 
 func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
+}
+
+func (s *Service) StoreAppCredential(ctx context.Context, ownerUserID string, appID string, payload projectvalidators.StoreAppCredentialRequest) (*projectmodels.AppCredential, error) {
+	app, err := s.repository.FindAppForOwner(ctx, ownerUserID, appID)
+	if err != nil {
+		return nil, err
+	}
+	if payload.Provider != app.Provider {
+		return nil, fmt.Errorf("%w: credential provider must match app provider", ErrInvalidCredential)
+	}
+	if err := validateCredentialType(app.Provider, payload.CredentialType); err != nil {
+		return nil, err
+	}
+
+	encryptedSecret, nonce, fingerprint, err := encryptCredentialSecret(payload.Secret)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	credential := projectmodels.AppCredential{
+		ID:              uuid.NewString(),
+		AppID:           app.ID,
+		Provider:        payload.Provider,
+		CredentialType:  payload.CredentialType,
+		EncryptedSecret: encryptedSecret,
+		SecretNonce:     nonce,
+		SecretSHA256:    fingerprint,
+		Active:          true,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := s.repository.UpsertAppCredential(ctx, credential); err != nil {
+		return nil, err
+	}
+	return &credential, nil
 }
 
 func (s *Service) CreateProject(ctx context.Context, ownerUserID string, payload projectvalidators.CreateProjectRequest) (projectmodels.Project, error) {
@@ -259,11 +326,22 @@ func (s *Service) GetAppAttestationStatus(ctx context.Context, ownerUserID strin
 		return nil, err
 	}
 
-	status := appAttestationStatus(*app)
+	credentialConfigured := false
+	credentialType := credentialTypeForProvider(app.Provider)
+	if credentialType != "" {
+		_, err := s.repository.FindActiveAppCredential(ctx, app.ID, app.Provider, credentialType)
+		if err == nil {
+			credentialConfigured = true
+		} else if !errors.Is(err, ErrAppCredentialNotFound) {
+			return nil, err
+		}
+	}
+
+	status := appAttestationStatus(*app, credentialConfigured)
 	return &status, nil
 }
 
-func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
+func appAttestationStatus(app projectmodels.ProjectApp, credentialConfigured bool) AppAttestationStatus {
 	status := AppAttestationStatus{
 		AppID:                        app.ID,
 		Platform:                     app.Platform,
@@ -280,7 +358,7 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 	switch app.Provider {
 	case enum.AppProviderPlayIntegrity:
 		status.Identifier = strings.TrimSpace(app.PackageName)
-		status.SetupSteps = androidPlayIntegritySetupSteps(status.Identifier)
+		status.SetupSteps = androidPlayIntegritySetupSteps(status.Identifier, credentialConfigured)
 		if app.Platform != enum.AppPlatformAndroid {
 			status.Issues = append(status.Issues, "Play Integrity requires an Android app")
 		}
@@ -289,7 +367,7 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 		}
 	case enum.AppProviderAppAttest:
 		status.Identifier = strings.TrimSpace(app.BundleID)
-		status.SetupSteps = appleAppAttestSetupSteps(status.Identifier)
+		status.SetupSteps = appleAppAttestSetupSteps(status.Identifier, credentialConfigured)
 		if app.Platform != enum.AppPlatformIOS {
 			status.Issues = append(status.Issues, "App Attest requires an iOS app")
 		}
@@ -301,7 +379,7 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 		if status.Identifier == "" {
 			status.Identifier = strings.TrimSpace(app.BundleID)
 		}
-		status.SetupSteps = firebaseAppCheckSetupSteps(status.Identifier)
+		status.SetupSteps = firebaseAppCheckSetupSteps(status.Identifier, credentialConfigured)
 		if status.Identifier == "" {
 			status.Issues = append(status.Issues, "package_name or bundle_id is required for Firebase App Check")
 		}
@@ -315,12 +393,15 @@ func appAttestationStatus(app projectmodels.ProjectApp) AppAttestationStatus {
 	return status
 }
 
-func androidPlayIntegritySetupSteps(packageName string) []AppSetupStep {
+func androidPlayIntegritySetupSteps(packageName string, credentialConfigured bool) []AppSetupStep {
 	credentialStatus := "pending"
-	credentialDetails := "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not set on the Phylax backend."
-	if strings.TrimSpace(os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")) != "" {
+	credentialDetails := "No active encrypted Google service account credential is stored for this app."
+	if credentialConfigured {
 		credentialStatus = "completed"
-		credentialDetails = "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend."
+		credentialDetails = "An active encrypted Google service account credential is stored for this app."
+	} else if strings.TrimSpace(os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")) != "" {
+		credentialStatus = "completed"
+		credentialDetails = "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend as a development fallback."
 	}
 
 	identifierStatus := "completed"
@@ -377,9 +458,9 @@ func androidPlayIntegritySetupSteps(packageName string) []AppSetupStep {
 			Key:                "service_account_credentials",
 			Title:              "Configure backend service account credentials",
 			Status:             credentialStatus,
-			VerificationMethod: "environment",
+			VerificationMethod: "database",
 			Details:            credentialDetails,
-			Action:             "Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON to the service account JSON for the linked Cloud project.",
+			Action:             "Upload the service account JSON for the linked Cloud project to this app's credentials.",
 		},
 		{
 			Key:                "android_client_token_flow",
@@ -393,7 +474,7 @@ func androidPlayIntegritySetupSteps(packageName string) []AppSetupStep {
 	}
 }
 
-func appleAppAttestSetupSteps(bundleID string) []AppSetupStep {
+func appleAppAttestSetupSteps(bundleID string, credentialConfigured bool) []AppSetupStep {
 	identifierStatus := "completed"
 	identifierDetails := "iOS bundle id is present on the Phylax app record."
 	if strings.TrimSpace(bundleID) == "" {
@@ -429,10 +510,10 @@ func appleAppAttestSetupSteps(bundleID string) []AppSetupStep {
 		{
 			Key:                "apple_team_id",
 			Title:              "Configure Apple team id",
-			Status:             "pending",
+			Status:             credentialSetupStatus(credentialConfigured),
 			VerificationMethod: "database",
-			Details:            "Phylax does not yet store team_id on project apps, so server-side App Attest validation cannot be fully configured.",
-			Action:             "Add team_id support to Phylax app settings, then save the developer's Apple team id.",
+			Details:            credentialSetupDetails(credentialConfigured, "Apple team id is stored as an encrypted app credential.", "No Apple team id credential is stored for this app."),
+			Action:             "Store the developer's Apple team id as this app's apple_team credential.",
 		},
 		{
 			Key:                "ios_client_key_flow",
@@ -446,7 +527,7 @@ func appleAppAttestSetupSteps(bundleID string) []AppSetupStep {
 	}
 }
 
-func firebaseAppCheckSetupSteps(identifier string) []AppSetupStep {
+func firebaseAppCheckSetupSteps(identifier string, credentialConfigured bool) []AppSetupStep {
 	identifierStatus := "completed"
 	identifierDetails := "App identifier is present on the Phylax app record."
 	if strings.TrimSpace(identifier) == "" {
@@ -478,7 +559,42 @@ func firebaseAppCheckSetupSteps(identifier string) []AppSetupStep {
 			Action:             "Enable the matching App Check provider in Firebase Console.",
 			DocsURL:            "https://firebase.google.com/docs/app-check",
 		},
+		{
+			Key:                "firebase_service_account_credentials",
+			Title:              "Configure Firebase service account credentials",
+			Status:             credentialSetupStatus(credentialConfigured),
+			VerificationMethod: "database",
+			Details:            credentialSetupDetails(credentialConfigured, "An active encrypted Firebase service account credential is stored for this app.", "No active Firebase service account credential is stored for this app."),
+			Action:             "Upload the Firebase service account JSON for this app.",
+		},
 	}
+}
+
+func credentialTypeForProvider(provider enum.AppProvider) string {
+	switch provider {
+	case enum.AppProviderPlayIntegrity:
+		return "google_service_account"
+	case enum.AppProviderFirebase:
+		return "firebase_service_account"
+	case enum.AppProviderAppAttest:
+		return "apple_team"
+	default:
+		return ""
+	}
+}
+
+func credentialSetupStatus(configured bool) string {
+	if configured {
+		return "completed"
+	}
+	return "pending"
+}
+
+func credentialSetupDetails(configured bool, completed string, pending string) string {
+	if configured {
+		return completed
+	}
+	return pending
 }
 
 func externalConfigurationCheck(steps []AppSetupStep) string {
@@ -528,6 +644,77 @@ func validateAppIdentifiers(platform enum.AppPlatform, packageName string, bundl
 		return fmt.Errorf("%w: unsupported platform", ErrInvalidApp)
 	}
 	return nil
+}
+
+func validateCredentialType(provider enum.AppProvider, credentialType string) error {
+	switch provider {
+	case enum.AppProviderPlayIntegrity:
+		if credentialType != "google_service_account" {
+			return fmt.Errorf("%w: Play Integrity requires google_service_account credentials", ErrInvalidCredential)
+		}
+	case enum.AppProviderFirebase:
+		if credentialType != "firebase_service_account" {
+			return fmt.Errorf("%w: Firebase App Check requires firebase_service_account credentials", ErrInvalidCredential)
+		}
+	case enum.AppProviderAppAttest:
+		if credentialType != "apple_team" {
+			return fmt.Errorf("%w: App Attest requires apple_team credentials", ErrInvalidCredential)
+		}
+	default:
+		return fmt.Errorf("%w: unsupported provider", ErrInvalidCredential)
+	}
+	return nil
+}
+
+func encryptCredentialSecret(secret string) (string, string, string, error) {
+	secret = strings.TrimSpace(secret)
+	if secret == "" {
+		return "", "", "", fmt.Errorf("%w: secret is required", ErrInvalidCredential)
+	}
+	gcm, err := credentialCipher()
+	if err != nil {
+		return "", "", "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", "", "", err
+	}
+	ciphertext := gcm.Seal(nil, nonce, []byte(secret), nil)
+	sum := sha256.Sum256([]byte(secret))
+	return base64.StdEncoding.EncodeToString(ciphertext), base64.StdEncoding.EncodeToString(nonce), hex.EncodeToString(sum[:]), nil
+}
+
+func decryptCredentialSecret(credential projectmodels.AppCredential) (string, error) {
+	gcm, err := credentialCipher()
+	if err != nil {
+		return "", err
+	}
+	nonce, err := base64.StdEncoding.DecodeString(credential.SecretNonce)
+	if err != nil {
+		return "", err
+	}
+	ciphertext, err := base64.StdEncoding.DecodeString(credential.EncryptedSecret)
+	if err != nil {
+		return "", err
+	}
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(plaintext), nil
+}
+
+func credentialCipher() (cipher.AEAD, error) {
+	secret := strings.TrimSpace(os.Getenv("PHYLAX_CREDENTIAL_ENCRYPTION_KEY"))
+	if len(secret) < 32 {
+		return nil, fmt.Errorf("%w: PHYLAX_CREDENTIAL_ENCRYPTION_KEY must be at least 32 characters", ErrInvalidCredential)
+	}
+	key := sha256.Sum256([]byte(secret))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
 }
 
 type GormRepository struct {
@@ -654,4 +841,29 @@ func (r *GormRepository) DeleteAppForOwner(ctx context.Context, ownerUserID stri
 		return err
 	}
 	return r.db.WithContext(ctx).Delete(app).Error
+}
+
+func (r *GormRepository) UpsertAppCredential(ctx context.Context, credential projectmodels.AppCredential) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&projectmodels.AppCredential{}).
+			Where("app_id = ? and provider = ? and credential_type = ? and active = true", credential.AppID, credential.Provider, credential.CredentialType).
+			Updates(map[string]any{"active": false, "updated_at": time.Now().UTC()}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&credential).Error
+	})
+}
+
+func (r *GormRepository) FindActiveAppCredential(ctx context.Context, appID string, provider enum.AppProvider, credentialType string) (*projectmodels.AppCredential, error) {
+	var credential projectmodels.AppCredential
+	err := r.db.WithContext(ctx).
+		Where("app_id = ? and provider = ? and credential_type = ? and active = true", appID, provider, credentialType).
+		First(&credential).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAppCredentialNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &credential, nil
 }

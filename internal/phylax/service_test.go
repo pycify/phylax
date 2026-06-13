@@ -18,7 +18,6 @@ func TestServiceCreatesChallengeAndVerifiesMockAndroidAttestation(t *testing.T) 
 
 	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
 		AppID:     "demo",
-		Platform:  PlatformAndroid,
 		Action:    "document_ai.ask_question",
 		InstallID: "install_123",
 	})
@@ -53,7 +52,6 @@ func TestServiceRejectsReusedChallenge(t *testing.T) {
 	service := newTestService(t)
 	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
 		AppID:     "demo",
-		Platform:  PlatformAndroid,
 		Action:    "document_ai.ask_question",
 		InstallID: "install_123",
 	})
@@ -78,7 +76,6 @@ func TestServiceVerifiesPlayIntegrityVerdict(t *testing.T) {
 	service := newRealAndroidTestService(t, fakePlayIntegrityVerifier{})
 	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
 		AppID:     "demo",
-		Platform:  PlatformAndroid,
 		Action:    "document_ai.ask_question",
 		InstallID: "install_123",
 	})
@@ -107,7 +104,6 @@ func TestServiceRejectsPlayIntegrityPackageMismatch(t *testing.T) {
 	service := newRealAndroidTestService(t, fakePlayIntegrityVerifier{requestPackageName: "com.attacker.app"})
 	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
 		AppID:     "demo",
-		Platform:  PlatformAndroid,
 		Action:    "document_ai.ask_question",
 		InstallID: "install_123",
 	})

@@ -11,6 +11,7 @@ func TestProjectTableNames(t *testing.T) {
 	require.Equal(t, "projects", Project{}.TableName())
 	require.Equal(t, "project_members", ProjectMember{}.TableName())
 	require.Equal(t, "project_apps", ProjectApp{}.TableName())
+	require.Equal(t, "app_credentials", AppCredential{}.TableName())
 }
 
 func TestProjectConstants(t *testing.T) {

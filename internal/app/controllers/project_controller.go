@@ -281,17 +281,50 @@ func (c *ProjectController) DeleteProjectApp(w http.ResponseWriter, req *http.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// GetProjectAppAttestationStatus godoc
+// StoreProjectAppCredential godoc
 //
-//	@Summary	Get project app steps
+//	@Summary	Store encrypted project app credential
+//	@Tags		Project Apps
+//	@Accept		json
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		app_id	path		string										true	"App id"
+//	@Param		payload	body		projectvalidators.StoreAppCredentialRequest	true	"Credential payload"
+//	@Success	201		{object}	response.AppCredentialResponse
+//	@Failure	400		{object}	response.ErrorResponse
+//	@Failure	404		{object}	response.ErrorResponse
+//	@Failure	422		{object}	response.ErrorResponse
+//	@Router		/v1/apps/{app_id}/credentials [post]
+func (c *ProjectController) StoreProjectAppCredential(w http.ResponseWriter, req *http.Request) {
+	userID, ok := helper.RequireUserID(w, req)
+	if !ok {
+		return
+	}
+	var payload projectvalidators.StoreAppCredentialRequest
+	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
+		return
+	}
+	credential, err := c.service.StoreAppCredential(req.Context(), userID, chi.URLParam(req, "app_id"), payload)
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
+	}
+	helper.WriteJSON(w, http.StatusCreated, projectdto.AppCredentialResponse{
+		Credential: projectdto.NewAppCredentialDTO(*credential),
+	})
+}
+
+// GetProjectAppSetupChecks godoc
+//
+//	@Summary	Get project app setup checks
 //	@Tags		Project Apps
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		app_id				path		string	true	"App id"
 //	@Success	200					{object}	response.AppAttestationStatusResponse
 //	@Failure	404					{object}	response.ErrorResponse
-//	@Router		/v1/apps/{app_id}/steps [get]
-func (c *ProjectController) GetProjectAppAttestationStatus(w http.ResponseWriter, req *http.Request) {
+//	@Router		/v1/apps/{app_id}/setup-checks [get]
+func (c *ProjectController) GetProjectAppSetupChecks(w http.ResponseWriter, req *http.Request) {
 	userID, ok := helper.RequireUserID(w, req)
 	if !ok {
 		return

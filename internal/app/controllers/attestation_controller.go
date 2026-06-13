@@ -25,16 +25,18 @@ func NewAttestationController(service *attestationservice.Service) *AttestationC
 //	@Tags		Attestation
 //	@Accept		json
 //	@Produce	json
+//	@Param		app_id	path		string							true	"App id"
 //	@Param		payload	body		phylax.CreateChallengeRequest	true	"Challenge payload"
 //	@Success	201		{object}	response.CreateChallengeResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
-//	@Router		/v1/challenges [post]
+//	@Router		/v1/apps/{app_id}/challenges [post]
 func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http.Request) {
 	var payload phylax.CreateChallengeRequest
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
+	payload.AppID = chi.URLParam(req, "app_id")
 
 	response, err := c.service.CreateChallenge(req.Context(), payload)
 	if err != nil {

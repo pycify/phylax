@@ -6,18 +6,21 @@ import (
 	"time"
 
 	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
+	"github.com/pycify/phylax/internal/app/types/enum"
 )
 
 type MemoryRepository struct {
-	mu       sync.RWMutex
-	projects map[string]projectmodels.Project
-	apps     map[string]projectmodels.ProjectApp
+	mu          sync.RWMutex
+	projects    map[string]projectmodels.Project
+	apps        map[string]projectmodels.ProjectApp
+	credentials map[string]projectmodels.AppCredential
 }
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		projects: map[string]projectmodels.Project{},
-		apps:     map[string]projectmodels.ProjectApp{},
+		projects:    map[string]projectmodels.Project{},
+		apps:        map[string]projectmodels.ProjectApp{},
+		credentials: map[string]projectmodels.AppCredential{},
 	}
 }
 
@@ -178,4 +181,32 @@ func (r *MemoryRepository) DeleteAppForOwner(_ context.Context, ownerUserID stri
 	app.DeletedAt.Valid = true
 	r.apps[appID] = app
 	return nil
+}
+
+func (r *MemoryRepository) UpsertAppCredential(_ context.Context, credential projectmodels.AppCredential) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.apps[credential.AppID]; !ok {
+		return ErrAppNotFound
+	}
+	for id, existing := range r.credentials {
+		if existing.AppID == credential.AppID && existing.Provider == credential.Provider && existing.CredentialType == credential.CredentialType && existing.Active && existing.DeletedAt.Time.IsZero() {
+			existing.Active = false
+			existing.UpdatedAt = time.Now().UTC()
+			r.credentials[id] = existing
+		}
+	}
+	r.credentials[credential.ID] = credential
+	return nil
+}
+
+func (r *MemoryRepository) FindActiveAppCredential(_ context.Context, appID string, provider enum.AppProvider, credentialType string) (*projectmodels.AppCredential, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, credential := range r.credentials {
+		if credential.AppID == appID && credential.Provider == provider && credential.CredentialType == credentialType && credential.Active && credential.DeletedAt.Time.IsZero() {
+			return &credential, nil
+		}
+	}
+	return nil, ErrAppCredentialNotFound
 }

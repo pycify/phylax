@@ -189,8 +189,10 @@ POST /v1/auth/accounts
 POST /v1/auth/verify-email
 POST /v1/auth/login
 POST /v1/auth/logout
-POST /v1/challenges
-POST /v1/attestations/verify
+POST /v1/apps/{app_id}/challenges
+POST /v1/apps/{app_id}/attestations/verify
+GET  /v1/apps/{app_id}/setup-checks
+POST /v1/apps/{app_id}/credentials
 POST /v1/sessions/introspect
 POST /v1/projects
 GET  /v1/projects
@@ -207,6 +209,10 @@ Storage is configured through `storage.driver` or `PHYLAX_STORAGE_DRIVER`.
 memory   -> local development
 postgres -> staging/production on Render
 ```
+
+Uploaded provider credentials are encrypted before storage. Set a strong
+`PHYLAX_CREDENTIAL_ENCRYPTION_KEY` value, at least 32 characters, before using
+`POST /v1/apps/{app_id}/credentials`.
 
 Postgres schema files live in:
 

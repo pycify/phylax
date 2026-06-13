@@ -56,10 +56,14 @@ func NewService(cfg config.Config, st Store, logger *slog.Logger, apps AppResolv
 }
 
 func (s *Service) CreateChallenge(ctx context.Context, req CreateChallengeRequest) (CreateChallengeResponse, error) {
-	if req.AppID == "" || req.Platform == "" || req.Action == "" || req.InstallID == "" {
-		return CreateChallengeResponse{}, errors.New("app_id, platform, action, and install_id are required")
+	if req.AppID == "" || req.Action == "" || req.InstallID == "" {
+		return CreateChallengeResponse{}, errors.New("app_id, action, and install_id are required")
 	}
 	app, err := s.resolveApp(ctx, req.AppID)
+	if err != nil {
+		return CreateChallengeResponse{}, err
+	}
+	req.Platform, err = inferPlatform(app)
 	if err != nil {
 		return CreateChallengeResponse{}, err
 	}

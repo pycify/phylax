@@ -59,6 +59,12 @@ type ProjectAppResponse struct {
 	Data    projectdto.ProjectAppResponse `json:"data"`
 }
 
+type AppCredentialResponse struct {
+	Error   bool                             `json:"error" example:"false"`
+	Message string                           `json:"message" example:"success"`
+	Data    projectdto.AppCredentialResponse `json:"data"`
+}
+
 type ProjectAppsResponse struct {
 	Error   bool                           `json:"error" example:"false"`
 	Message string                         `json:"message" example:"success"`

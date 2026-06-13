@@ -142,24 +142,13 @@ definitions:
     properties:
       action:
         type: string
-      app_id:
-        type: string
       install_id:
         type: string
-      platform:
-        allOf:
-        - $ref: '#/definitions/phylax.Platform'
-        enum:
-        - android
-        - apple
-        - firebase
       subject:
         type: string
     required:
     - action
-    - app_id
     - install_id
-    - platform
     type: object
   phylax.CreateChallengeResponse:
     properties:
@@ -289,6 +278,30 @@ definitions:
     properties:
       status:
         $ref: '#/definitions/projects.AppAttestationStatusDTO'
+    type: object
+  projects.AppCredentialDTO:
+    properties:
+      active:
+        type: boolean
+      app_id:
+        type: string
+      created_at:
+        type: string
+      credential_type:
+        type: string
+      id:
+        type: string
+      provider:
+        $ref: '#/definitions/enum.AppProvider'
+      secret_sha256:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  projects.AppCredentialResponse:
+    properties:
+      credential:
+        $ref: '#/definitions/projects.AppCredentialDTO'
     type: object
   projects.AppSetupStepDTO:
     properties:
@@ -432,6 +445,29 @@ definitions:
           $ref: '#/definitions/projects.ProjectDTO'
         type: array
     type: object
+  projects.StoreAppCredentialRequest:
+    properties:
+      credential_type:
+        enum:
+        - google_service_account
+        - firebase_service_account
+        - apple_team
+        type: string
+      provider:
+        allOf:
+        - $ref: '#/definitions/enum.AppProvider'
+        enum:
+        - play_integrity
+        - app_attest
+        - firebase_app_check
+      secret:
+        minLength: 8
+        type: string
+    required:
+    - credential_type
+    - provider
+    - secret
+    type: object
   projects.UpdateProjectAppRequest:
     properties:
       bundle_id:
@@ -492,6 +528,17 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/projects.AppAttestationStatusResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.AppCredentialResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.AppCredentialResponse'
       error:
         example: false
         type: boolean
@@ -733,7 +780,81 @@ paths:
       summary: Verify provider proof and issue a Phylax token
       tags:
       - Attestation
-  /v1/apps/{app_id}/steps:
+  /v1/apps/{app_id}/challenges:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      - description: Challenge payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/phylax.CreateChallengeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.CreateChallengeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create attestation challenge
+      tags:
+      - Attestation
+  /v1/apps/{app_id}/credentials:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: App id
+        in: path
+        name: app_id
+        required: true
+        type: string
+      - description: Credential payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/projects.StoreAppCredentialRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.AppCredentialResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Store encrypted project app credential
+      tags:
+      - Project Apps
+  /v1/apps/{app_id}/setup-checks:
     get:
       parameters:
       - description: App id
@@ -754,7 +875,7 @@ paths:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get project app steps
+      summary: Get project app setup checks
       tags:
       - Project Apps
   /v1/auth/accounts:
@@ -848,35 +969,6 @@ paths:
       summary: Verify standard account email
       tags:
       - Auth
-  /v1/challenges:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Challenge payload
-        in: body
-        name: payload
-        required: true
-        schema:
-          $ref: '#/definitions/phylax.CreateChallengeRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/response.CreateChallengeResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "422":
-          description: Unprocessable Entity
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Create attestation challenge
-      tags:
-      - Attestation
   /v1/health:
     get:
       produces:

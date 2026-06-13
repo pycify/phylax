@@ -32,3 +32,9 @@ type UpdateProjectAppRequest struct {
 	BundleID    string              `json:"bundle_id" validate:"omitempty,min=3,max=255"`
 	Enabled     *bool               `json:"enabled"`
 }
+
+type StoreAppCredentialRequest struct {
+	Provider       enum.AppProvider `json:"provider" validate:"required,oneof=play_integrity app_attest firebase_app_check"`
+	CredentialType string           `json:"credential_type" validate:"required,oneof=google_service_account firebase_service_account apple_team"`
+	Secret         string           `json:"secret" validate:"required,min=8"`
+}

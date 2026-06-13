@@ -34,9 +34,7 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 	server := httptest.NewServer(newTestRouter(t))
 	defer server.Close()
 
-	challenge := postJSONEnvelope[phylax.CreateChallengeResponse](t, server.URL+"/v1/challenges", map[string]any{
-		"app_id":     "demo",
-		"platform":   "android",
+	challenge := postJSONEnvelope[phylax.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
 		"action":     "ai.ask",
 		"install_id": "install_123",
 	}, http.StatusCreated)
@@ -57,8 +55,8 @@ func TestRouterValidatesChallengePayload(t *testing.T) {
 	server := httptest.NewServer(newTestRouter(t))
 	defer server.Close()
 
-	_ = postJSON[map[string]any](t, server.URL+"/v1/challenges", map[string]any{
-		"app_id": "demo",
+	_ = postJSON[map[string]any](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
+		"action": "ai.ask",
 	}, http.StatusUnprocessableEntity)
 }
 

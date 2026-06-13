@@ -189,7 +189,122 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/apps/{app_id}/steps": {
+        "/v1/apps/{app_id}/challenges": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attestation"
+                ],
+                "summary": "Create attestation challenge",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "app_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Challenge payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/phylax.CreateChallengeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/response.CreateChallengeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/apps/{app_id}/credentials": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Project Apps"
+                ],
+                "summary": "Store encrypted project app credential",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "App id",
+                        "name": "app_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credential payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/projects.StoreAppCredentialRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/response.AppCredentialResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/apps/{app_id}/setup-checks": {
             "get": {
                 "security": [
                     {
@@ -202,7 +317,7 @@ const docTemplate = `{
                 "tags": [
                     "Project Apps"
                 ],
-                "summary": "Get project app steps",
+                "summary": "Get project app setup checks",
                 "parameters": [
                     {
                         "type": "string",
@@ -361,51 +476,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.AuthTokenResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/challenges": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Attestation"
-                ],
-                "summary": "Create attestation challenge",
-                "parameters": [
-                    {
-                        "description": "Challenge payload",
-                        "name": "payload",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/phylax.CreateChallengeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/response.CreateChallengeResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "422": {
@@ -967,31 +1037,14 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "action",
-                "app_id",
-                "install_id",
-                "platform"
+                "install_id"
             ],
             "properties": {
                 "action": {
                     "type": "string"
                 },
-                "app_id": {
-                    "type": "string"
-                },
                 "install_id": {
                     "type": "string"
-                },
-                "platform": {
-                    "enum": [
-                        "android",
-                        "apple",
-                        "firebase"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/phylax.Platform"
-                        }
-                    ]
                 },
                 "subject": {
                     "type": "string"
@@ -1189,6 +1242,43 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "$ref": "#/definitions/projects.AppAttestationStatusDTO"
+                }
+            }
+        },
+        "projects.AppCredentialDTO": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "app_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "credential_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/enum.AppProvider"
+                },
+                "secret_sha256": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "projects.AppCredentialResponse": {
+            "type": "object",
+            "properties": {
+                "credential": {
+                    "$ref": "#/definitions/projects.AppCredentialDTO"
                 }
             }
         },
@@ -1407,6 +1497,40 @@ const docTemplate = `{
                 }
             }
         },
+        "projects.StoreAppCredentialRequest": {
+            "type": "object",
+            "required": [
+                "credential_type",
+                "provider",
+                "secret"
+            ],
+            "properties": {
+                "credential_type": {
+                    "type": "string",
+                    "enum": [
+                        "google_service_account",
+                        "firebase_service_account",
+                        "apple_team"
+                    ]
+                },
+                "provider": {
+                    "enum": [
+                        "play_integrity",
+                        "app_attest",
+                        "firebase_app_check"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.AppProvider"
+                        }
+                    ]
+                },
+                "secret": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
         "projects.UpdateProjectAppRequest": {
             "type": "object",
             "properties": {
@@ -1494,6 +1618,22 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/projects.AppAttestationStatusResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.AppCredentialResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.AppCredentialResponse"
                 },
                 "error": {
                     "type": "boolean",

@@ -38,3 +38,4 @@ temp/
 *.swp
 *.swo
 .DS_Store
+acc.json

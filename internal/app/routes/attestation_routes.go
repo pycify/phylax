@@ -6,7 +6,7 @@ import (
 )
 
 func RegisterAttestationRoutes(router chi.Router, controller *controllers.AttestationController) {
-	router.Post("/v1/challenges", controller.CreateChallenge)
+	router.Post("/v1/apps/{app_id}/challenges", controller.CreateChallenge)
 	router.Post("/v1/apps/{app_id}/attestations/verify", controller.VerifyAttestation)
 	router.Post("/v1/sessions/introspect", controller.Introspect)
 }

@@ -106,7 +106,7 @@ func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 }
 
 func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
-	t.Setenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", `{"type":"service_account"}`)
+	t.Setenv("PHYLAX_CREDENTIAL_ENCRYPTION_KEY", "test-encryption-key-with-32-characters")
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()
 
@@ -123,6 +123,14 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 		PackageName: "com.acme.app",
 	})
 	require.NoError(t, err)
+	credential, err := service.StoreAppCredential(ctx, "user_1", app.ID, projectvalidators.StoreAppCredentialRequest{
+		Provider:       enum.AppProviderPlayIntegrity,
+		CredentialType: "google_service_account",
+		Secret:         `{"type":"service_account","client_email":"phylax@example.com"}`,
+	})
+	require.NoError(t, err)
+	require.Equal(t, app.ID, credential.AppID)
+	require.NotEqual(t, `{"type":"service_account","client_email":"phylax@example.com"}`, credential.EncryptedSecret)
 
 	status, err := service.GetAppAttestationStatus(ctx, "user_1", app.ID)
 	require.NoError(t, err)
@@ -135,13 +143,14 @@ func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {
 		Key:                "service_account_credentials",
 		Title:              "Configure backend service account credentials",
 		Status:             "completed",
-		VerificationMethod: "environment",
-		Details:            "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is present on the Phylax backend.",
-		Action:             "Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON to the service account JSON for the linked Cloud project.",
+		VerificationMethod: "database",
+		Details:            "An active encrypted Google service account credential is stored for this app.",
+		Action:             "Upload the service account JSON for the linked Cloud project to this app's credentials.",
 	})
 }
 
 func TestProjectServiceResolvesAppConfigForAttestation(t *testing.T) {
+	t.Setenv("PHYLAX_CREDENTIAL_ENCRYPTION_KEY", "test-encryption-key-with-32-characters")
 	service := NewService(NewMemoryRepository())
 	ctx := context.Background()
 
@@ -158,13 +167,20 @@ func TestProjectServiceResolvesAppConfigForAttestation(t *testing.T) {
 		PackageName: "com.acme.app",
 	})
 	require.NoError(t, err)
+	_, err = service.StoreAppCredential(ctx, "user_1", app.ID, projectvalidators.StoreAppCredentialRequest{
+		Provider:       enum.AppProviderPlayIntegrity,
+		CredentialType: "google_service_account",
+		Secret:         `{"type":"service_account","client_email":"phylax@example.com"}`,
+	})
+	require.NoError(t, err)
 
 	resolved, err := service.ResolveApp(ctx, app.ID)
 	require.NoError(t, err)
 	require.Equal(t, app.ID, resolved.ID)
 	require.True(t, resolved.Android.Enabled)
 	require.Equal(t, "com.acme.app", resolved.Android.PackageName)
-	require.Equal(t, "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", resolved.Android.ServiceAccountJSONEnv)
+	require.Empty(t, resolved.Android.ServiceAccountJSONEnv)
+	require.Equal(t, `{"type":"service_account","client_email":"phylax@example.com"}`, resolved.Android.ServiceAccountJSON)
 }
 
 func TestProjectServiceSoftDeletesAppsThroughProjectDelete(t *testing.T) {
