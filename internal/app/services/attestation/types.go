@@ -1,14 +1,14 @@
-package phylax
+package attestation
 
 import "time"
-
-type Platform string
 
 const (
 	PlatformAndroid  Platform = "android"
 	PlatformApple    Platform = "apple"
 	PlatformFirebase Platform = "firebase"
 )
+
+type Platform string
 
 type Challenge struct {
 	ID         string    `json:"id"`

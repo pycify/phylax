@@ -1,43 +1,37 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadAppliesEnvironmentOverrides(t *testing.T) {
+func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PHYLAX_ENV", "production")
 	t.Setenv("PORT", "9090")
-	t.Setenv("PHYLAX_STORAGE_DRIVER", "memory")
+	t.Setenv("DATABASE_URL", "postgresql://example")
 	t.Setenv("PHYLAX_TOKEN_SECRET", "test-secret-with-more-than-32-bytes")
+	t.Setenv("PHYLAX_TOKEN_ISSUER", "phylax-test")
+	t.Setenv("PHYLAX_TOKEN_TTL_SECONDS", "1200")
+	t.Setenv("PHYLAX_CHALLENGE_TTL_SECONDS", "600")
 
-	path := writeConfig(t, `{
-	  "token": {"secret": "file-secret-with-more-than-32-bytes"}
-	}`)
-
-	cfg, err := Load(path)
+	cfg, err := Load()
 	require.NoError(t, err)
 	require.Equal(t, "production", cfg.Environment)
 	require.Equal(t, ":9090", cfg.Server.Addr)
+	require.Equal(t, "postgres", cfg.Storage.Driver)
+	require.Equal(t, "postgresql://example", cfg.Storage.DatabaseURL)
 	require.Equal(t, "test-secret-with-more-than-32-bytes", cfg.Token.Secret)
+	require.Equal(t, "phylax-test", cfg.Token.Issuer)
+	require.Equal(t, 1200, cfg.Token.TTLSeconds)
+	require.Equal(t, 600, cfg.Challenges.TTLSeconds)
 }
 
-func TestLoadDoesNotRequireStaticApps(t *testing.T) {
-	path := writeConfig(t, `{
-	  "token": {"secret": "file-secret-with-more-than-32-bytes"}
-	}`)
+func TestLoadRequiresDatabaseURL(t *testing.T) {
+	t.Setenv("PHYLAX_ENV", "development")
+	t.Setenv("PHYLAX_TOKEN_SECRET", "test-secret-with-more-than-32-bytes")
 
-	cfg, err := Load(path)
-	require.NoError(t, err)
-	require.Equal(t, "file-secret-with-more-than-32-bytes", cfg.Token.Secret)
-}
-
-func writeConfig(t *testing.T, content string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "phylax.json")
-	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
-	return path
+	_, err := Load()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DATABASE_URL")
 }

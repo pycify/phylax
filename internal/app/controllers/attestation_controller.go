@@ -7,7 +7,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/pycify/phylax/internal/app/helper"
 	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
-	"github.com/pycify/phylax/internal/phylax"
 )
 
 type AttestationController struct {
@@ -26,13 +25,13 @@ func NewAttestationController(service *attestationservice.Service) *AttestationC
 //	@Accept		json
 //	@Produce	json
 //	@Param		app_id	path		string							true	"App id"
-//	@Param		payload	body		phylax.CreateChallengeRequest	true	"Challenge payload"
+//	@Param		payload	body		attestation.CreateChallengeRequest	true	"Challenge payload"
 //	@Success	201		{object}	response.CreateChallengeResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/apps/{app_id}/challenges [post]
 func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.CreateChallengeRequest
+	var payload attestationservice.CreateChallengeRequest
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
@@ -53,13 +52,13 @@ func (c *AttestationController) CreateChallenge(w http.ResponseWriter, req *http
 //	@Accept		json
 //	@Produce	json
 //	@Param		app_id	path		string							true	"App id"
-//	@Param		payload	body		phylax.VerifyAttestationRequest	true	"Attestation payload"
+//	@Param		payload	body		attestation.VerifyAttestationRequest	true	"Attestation payload"
 //	@Success	200		{object}	response.VerifyAttestationResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/apps/{app_id}/attestations/verify [post]
 func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.VerifyAttestationRequest
+	var payload attestationservice.VerifyAttestationRequest
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
@@ -79,13 +78,13 @@ func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *ht
 //	@Tags		Sessions
 //	@Accept		json
 //	@Produce	json
-//	@Param		payload	body		phylax.IntrospectRequest	true	"Token payload"
+//	@Param		payload	body		attestation.IntrospectRequest	true	"Token payload"
 //	@Success	200		{object}	response.IntrospectResponse
 //	@Failure	400		{object}	response.ErrorResponse
 //	@Failure	422		{object}	response.ErrorResponse
 //	@Router		/v1/sessions/introspect [post]
 func (c *AttestationController) Introspect(w http.ResponseWriter, req *http.Request) {
-	var payload phylax.IntrospectRequest
+	var payload attestationservice.IntrospectRequest
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}

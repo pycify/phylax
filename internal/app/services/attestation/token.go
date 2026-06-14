@@ -1,4 +1,4 @@
-package phylax
+package attestation
 
 import (
 	"crypto/hmac"

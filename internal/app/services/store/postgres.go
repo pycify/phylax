@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/pycify/phylax/internal/phylax"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -58,23 +57,23 @@ func NewPostgresStore(databaseURL string) (*PostgresStore, error) {
 	return &PostgresStore{db: db}, nil
 }
 
-func (s *PostgresStore) CreateChallenge(ctx context.Context, challenge phylax.Challenge) error {
+func (s *PostgresStore) CreateChallenge(ctx context.Context, challenge Challenge) error {
 	return s.db.WithContext(ctx).Create(challengeToModel(challenge)).Error
 }
 
-func (s *PostgresStore) ConsumeChallenge(ctx context.Context, id string) (*phylax.Challenge, error) {
-	var consumed phylax.Challenge
+func (s *PostgresStore) ConsumeChallenge(ctx context.Context, id string) (*Challenge, error) {
+	var consumed Challenge
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var model challengeModel
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&model, "id = ?", id).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return phylax.ErrNotFound
+			return ErrNotFound
 		}
 		if err != nil {
 			return err
 		}
 		if model.ConsumedAt != nil {
-			return phylax.ErrNotFound
+			return ErrNotFound
 		}
 
 		now := time.Now().UTC()
@@ -91,15 +90,15 @@ func (s *PostgresStore) ConsumeChallenge(ctx context.Context, id string) (*phyla
 	return &consumed, nil
 }
 
-func (s *PostgresStore) SaveSession(ctx context.Context, session phylax.AttestationSession) error {
+func (s *PostgresStore) SaveSession(ctx context.Context, session AttestationSession) error {
 	return s.db.WithContext(ctx).Create(sessionToModel(session)).Error
 }
 
-func (s *PostgresStore) FindSession(ctx context.Context, id string) (*phylax.AttestationSession, error) {
+func (s *PostgresStore) FindSession(ctx context.Context, id string) (*AttestationSession, error) {
 	var model sessionModel
 	err := s.db.WithContext(ctx).First(&model, "id = ?", id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, phylax.ErrNotFound
+		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -108,7 +107,7 @@ func (s *PostgresStore) FindSession(ctx context.Context, id string) (*phylax.Att
 	return &session, nil
 }
 
-func challengeToModel(challenge phylax.Challenge) *challengeModel {
+func challengeToModel(challenge Challenge) *challengeModel {
 	var consumedAt *time.Time
 	if !challenge.ConsumedAt.IsZero() {
 		consumedAt = &challenge.ConsumedAt
@@ -126,11 +125,11 @@ func challengeToModel(challenge phylax.Challenge) *challengeModel {
 	}
 }
 
-func challengeFromModel(model challengeModel) phylax.Challenge {
-	challenge := phylax.Challenge{
+func challengeFromModel(model challengeModel) Challenge {
+	challenge := Challenge{
 		ID:        model.ID,
 		AppID:     model.AppID,
-		Platform:  phylax.Platform(model.Platform),
+		Platform:  Platform(model.Platform),
 		Action:    model.Action,
 		InstallID: model.InstallID,
 		Nonce:     model.Nonce,
@@ -143,7 +142,7 @@ func challengeFromModel(model challengeModel) phylax.Challenge {
 	return challenge
 }
 
-func sessionToModel(session phylax.AttestationSession) *sessionModel {
+func sessionToModel(session AttestationSession) *sessionModel {
 	var subject *string
 	if session.Subject != "" {
 		subject = &session.Subject
@@ -161,11 +160,11 @@ func sessionToModel(session phylax.AttestationSession) *sessionModel {
 	}
 }
 
-func sessionFromModel(model sessionModel) phylax.AttestationSession {
-	session := phylax.AttestationSession{
+func sessionFromModel(model sessionModel) AttestationSession {
+	session := AttestationSession{
 		ID:        model.ID,
 		AppID:     model.AppID,
-		Platform:  phylax.Platform(model.Platform),
+		Platform:  Platform(model.Platform),
 		Action:    model.Action,
 		InstallID: model.InstallID,
 		RiskLevel: model.RiskLevel,

@@ -1,4 +1,4 @@
-package phylax
+package attestation
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	attestationstore "github.com/pycify/phylax/internal/app/services/store"
 	"github.com/pycify/phylax/internal/config"
 	"google.golang.org/api/playintegrity/v1"
 )
@@ -229,25 +230,25 @@ func (v fakePlayIntegrityVerifier) Decode(_ context.Context, app config.AppConfi
 
 type memoryTestStore struct {
 	mu         sync.Mutex
-	challenges map[string]Challenge
-	sessions   map[string]AttestationSession
+	challenges map[string]attestationstore.Challenge
+	sessions   map[string]attestationstore.AttestationSession
 }
 
 func newMemoryTestStore() *memoryTestStore {
 	return &memoryTestStore{
-		challenges: map[string]Challenge{},
-		sessions:   map[string]AttestationSession{},
+		challenges: map[string]attestationstore.Challenge{},
+		sessions:   map[string]attestationstore.AttestationSession{},
 	}
 }
 
-func (s *memoryTestStore) CreateChallenge(_ context.Context, challenge Challenge) error {
+func (s *memoryTestStore) CreateChallenge(_ context.Context, challenge attestationstore.Challenge) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.challenges[challenge.ID] = challenge
 	return nil
 }
 
-func (s *memoryTestStore) ConsumeChallenge(_ context.Context, id string) (*Challenge, error) {
+func (s *memoryTestStore) ConsumeChallenge(_ context.Context, id string) (*attestationstore.Challenge, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	challenge, ok := s.challenges[id]
@@ -259,14 +260,14 @@ func (s *memoryTestStore) ConsumeChallenge(_ context.Context, id string) (*Chall
 	return &challenge, nil
 }
 
-func (s *memoryTestStore) SaveSession(_ context.Context, session AttestationSession) error {
+func (s *memoryTestStore) SaveSession(_ context.Context, session attestationstore.AttestationSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sessions[session.ID] = session
 	return nil
 }
 
-func (s *memoryTestStore) FindSession(_ context.Context, id string) (*AttestationSession, error) {
+func (s *memoryTestStore) FindSession(_ context.Context, id string) (*attestationstore.AttestationSession, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[id]

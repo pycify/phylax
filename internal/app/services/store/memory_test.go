@@ -7,15 +7,14 @@ import (
 	"time"
 
 	"github.com/pycify/phylax/internal/config"
-	"github.com/pycify/phylax/internal/phylax"
 )
 
 func TestMemoryStoreChallengeLifecycle(t *testing.T) {
 	st := NewMemoryStore()
-	challenge := phylax.Challenge{
+	challenge := Challenge{
 		ID:        "chl_123",
 		AppID:     "demo",
-		Platform:  phylax.PlatformAndroid,
+		Platform:  PlatformAndroid,
 		Action:    "ai.ask",
 		InstallID: "install_123",
 		Nonce:     "nonce",
@@ -33,17 +32,17 @@ func TestMemoryStoreChallengeLifecycle(t *testing.T) {
 	if consumed.ID != challenge.ID {
 		t.Fatalf("expected challenge %q, got %q", challenge.ID, consumed.ID)
 	}
-	if _, err := st.ConsumeChallenge(context.Background(), challenge.ID); !errors.Is(err, phylax.ErrNotFound) {
+	if _, err := st.ConsumeChallenge(context.Background(), challenge.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected reused challenge not found, got %v", err)
 	}
 }
 
 func TestMemoryStoreSessionLifecycle(t *testing.T) {
 	st := NewMemoryStore()
-	session := phylax.AttestationSession{
+	session := AttestationSession{
 		ID:        "ses_123",
 		AppID:     "demo",
-		Platform:  phylax.PlatformAndroid,
+		Platform:  PlatformAndroid,
 		Action:    "ai.ask",
 		InstallID: "install_123",
 		RiskLevel: "low",

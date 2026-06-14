@@ -1,5 +1,133 @@
 basePath: /
 definitions:
+  attestation.AttestationSession:
+    properties:
+      action:
+        type: string
+      app_id:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      install_id:
+        type: string
+      issued_at:
+        type: string
+      platform:
+        $ref: '#/definitions/attestation.Platform'
+      risk_level:
+        type: string
+      subject:
+        type: string
+    type: object
+  attestation.CreateChallengeRequest:
+    properties:
+      action:
+        type: string
+      install_id:
+        type: string
+      subject:
+        type: string
+    required:
+    - action
+    - install_id
+    type: object
+  attestation.CreateChallengeResponse:
+    properties:
+      action:
+        type: string
+      app_id:
+        type: string
+      challenge_id:
+        type: string
+      cloud_project_number:
+        type: string
+      expires_at:
+        type: string
+      nonce:
+        type: string
+      platform:
+        $ref: '#/definitions/attestation.Platform'
+    type: object
+  attestation.IntrospectRequest:
+    properties:
+      token:
+        type: string
+    required:
+    - token
+    type: object
+  attestation.IntrospectResponse:
+    properties:
+      active:
+        type: boolean
+      error:
+        type: string
+      session:
+        $ref: '#/definitions/attestation.AttestationSession'
+    type: object
+  attestation.Platform:
+    enum:
+    - android
+    - apple
+    - firebase
+    type: string
+    x-enum-varnames:
+    - PlatformAndroid
+    - PlatformApple
+    - PlatformFirebase
+  attestation.Verdict:
+    properties:
+      action:
+        type: string
+      app_id:
+        type: string
+      attested_at:
+        type: string
+      challenge_id:
+        type: string
+      claims:
+        additionalProperties: {}
+        type: object
+      install_id:
+        type: string
+      platform:
+        $ref: '#/definitions/attestation.Platform'
+      provider:
+        type: string
+      risk_level:
+        type: string
+    type: object
+  attestation.VerifyAttestationRequest:
+    properties:
+      challenge_id:
+        type: string
+      install_id:
+        type: string
+      key_id:
+        type: string
+      proof:
+        additionalProperties: {}
+        type: object
+      subject:
+        type: string
+      token:
+        type: string
+    required:
+    - challenge_id
+    - install_id
+    type: object
+  attestation.VerifyAttestationResponse:
+    properties:
+      expires_at:
+        type: string
+      session:
+        $ref: '#/definitions/attestation.AttestationSession'
+      token:
+        type: string
+      verdict:
+        $ref: '#/definitions/attestation.Verdict'
+    type: object
   enum.AppEnvironment:
     enum:
     - development
@@ -116,134 +244,6 @@ definitions:
     required:
     - code
     - email
-    type: object
-  phylax.AttestationSession:
-    properties:
-      action:
-        type: string
-      app_id:
-        type: string
-      expires_at:
-        type: string
-      id:
-        type: string
-      install_id:
-        type: string
-      issued_at:
-        type: string
-      platform:
-        $ref: '#/definitions/phylax.Platform'
-      risk_level:
-        type: string
-      subject:
-        type: string
-    type: object
-  phylax.CreateChallengeRequest:
-    properties:
-      action:
-        type: string
-      install_id:
-        type: string
-      subject:
-        type: string
-    required:
-    - action
-    - install_id
-    type: object
-  phylax.CreateChallengeResponse:
-    properties:
-      action:
-        type: string
-      app_id:
-        type: string
-      challenge_id:
-        type: string
-      cloud_project_number:
-        type: string
-      expires_at:
-        type: string
-      nonce:
-        type: string
-      platform:
-        $ref: '#/definitions/phylax.Platform'
-    type: object
-  phylax.IntrospectRequest:
-    properties:
-      token:
-        type: string
-    required:
-    - token
-    type: object
-  phylax.IntrospectResponse:
-    properties:
-      active:
-        type: boolean
-      error:
-        type: string
-      session:
-        $ref: '#/definitions/phylax.AttestationSession'
-    type: object
-  phylax.Platform:
-    enum:
-    - android
-    - apple
-    - firebase
-    type: string
-    x-enum-varnames:
-    - PlatformAndroid
-    - PlatformApple
-    - PlatformFirebase
-  phylax.Verdict:
-    properties:
-      action:
-        type: string
-      app_id:
-        type: string
-      attested_at:
-        type: string
-      challenge_id:
-        type: string
-      claims:
-        additionalProperties: {}
-        type: object
-      install_id:
-        type: string
-      platform:
-        $ref: '#/definitions/phylax.Platform'
-      provider:
-        type: string
-      risk_level:
-        type: string
-    type: object
-  phylax.VerifyAttestationRequest:
-    properties:
-      challenge_id:
-        type: string
-      install_id:
-        type: string
-      key_id:
-        type: string
-      proof:
-        additionalProperties: {}
-        type: object
-      subject:
-        type: string
-      token:
-        type: string
-    required:
-    - challenge_id
-    - install_id
-    type: object
-  phylax.VerifyAttestationResponse:
-    properties:
-      expires_at:
-        type: string
-      session:
-        $ref: '#/definitions/phylax.AttestationSession'
-      token:
-        type: string
-      verdict:
-        $ref: '#/definitions/phylax.Verdict'
     type: object
   projects.AppAttestationStatusDTO:
     properties:
@@ -572,7 +572,7 @@ definitions:
   response.CreateChallengeResponse:
     properties:
       data:
-        $ref: '#/definitions/phylax.CreateChallengeResponse'
+        $ref: '#/definitions/attestation.CreateChallengeResponse'
       error:
         example: false
         type: boolean
@@ -612,7 +612,7 @@ definitions:
   response.IntrospectResponse:
     properties:
       data:
-        $ref: '#/definitions/phylax.IntrospectResponse'
+        $ref: '#/definitions/attestation.IntrospectResponse'
       error:
         example: false
         type: boolean
@@ -667,7 +667,7 @@ definitions:
   response.VerifyAttestationResponse:
     properties:
       data:
-        $ref: '#/definitions/phylax.VerifyAttestationResponse'
+        $ref: '#/definitions/attestation.VerifyAttestationResponse'
       error:
         example: false
         type: boolean
@@ -773,7 +773,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/phylax.VerifyAttestationRequest'
+          $ref: '#/definitions/attestation.VerifyAttestationRequest'
       produces:
       - application/json
       responses:
@@ -807,7 +807,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/phylax.CreateChallengeRequest'
+          $ref: '#/definitions/attestation.CreateChallengeRequest'
       produces:
       - application/json
       responses:
@@ -1178,7 +1178,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/phylax.IntrospectRequest'
+          $ref: '#/definitions/attestation.IntrospectRequest'
       produces:
       - application/json
       responses:

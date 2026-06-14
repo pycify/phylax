@@ -8,7 +8,7 @@ Phylax session tokens that backend APIs can require on sensitive routes.
 Current scope:
 
 - Standalone HTTP service
-- JSON configuration
+- Environment-based configuration
 - Multi-app registry
 - Provider readiness checks
 - Challenge issuance
@@ -27,35 +27,29 @@ can be added without changing the API surface.
 Phylax uses a flavour-based setup:
 
 ```text
-development -> local service + local memory store by default
+development -> local service + Postgres via DATABASE_URL
 staging     -> Render + Postgres via DATABASE_URL
 production  -> Render + Postgres via DATABASE_URL
 ```
 
-Set the environment with:
+Configuration is loaded from `.env` locally and environment variables in
+deployment. Start from the example file:
 
 ```sh
-PHYLAX_ENV=development
-PHYLAX_ENV=staging
-PHYLAX_ENV=production
+cp .env.example .env
 ```
 
-The service automatically loads:
+Required values are validated on startup:
 
 ```text
-configs/phylax.development.json
-configs/phylax.staging.json
-configs/phylax.production.json
+PHYLAX_ENV
+DATABASE_URL
+PHYLAX_TOKEN_SECRET
+PHYLAX_CREDENTIAL_ENCRYPTION_KEY
 ```
 
-You can override the path with:
-
-```sh
-PHYLAX_CONFIG=/path/to/phylax.json
-```
-
-Runtime secrets and deployment values belong in `.env` locally and Render
-environment variables remotely. See `.env.example`.
+When `MAIL_DRIVER=smtp`, `SMTP_HOST`, `SMTP_PORT`, and `MAIL_FROM_EMAIL` are
+also required. `SMTP_PASS` is optional.
 
 ## Run Locally
 
@@ -86,7 +80,7 @@ HTTP router:      chi
 ORM/query layer:  gorm
 Migrations:       golang-migrate
 Validation:       go-playground/validator
-Config/env:       viper + godotenv
+Config/env:       godotenv + typed validation
 OpenAPI:          swaggo annotations + generated docs
 DI:               manual constructors
 Testing:          standard testing + testify
@@ -203,12 +197,11 @@ DELETE /v1/projects/{project_id}
 
 ## Persistence
 
-Storage is configured through `storage.driver` or `PHYLAX_STORAGE_DRIVER`.
+Storage is configured through `PHYLAX_STORAGE_DRIVER`.
 
-```text
-memory   -> local development
-postgres -> staging/production on Render
-```
+Runtime uses Postgres through `DATABASE_URL`. The in-memory store remains
+available for tests and explicit local experiments, but `DATABASE_URL` is still
+validated as a required environment variable.
 
 Uploaded provider credentials are encrypted before storage. Set a strong
 `PHYLAX_CREDENTIAL_ENCRYPTION_KEY` value, at least 32 characters, before using

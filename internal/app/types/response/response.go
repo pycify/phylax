@@ -1,9 +1,9 @@
 package response
 
 import (
+	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
 	identitydto "github.com/pycify/phylax/internal/app/types/dto/identity"
 	projectdto "github.com/pycify/phylax/internal/app/types/dto/projects"
-	"github.com/pycify/phylax/internal/phylax"
 )
 
 type APIResponse[T any] struct {
@@ -78,19 +78,19 @@ type AppAttestationStatusResponse struct {
 }
 
 type CreateChallengeResponse struct {
-	Error   bool                           `json:"error" example:"false"`
-	Message string                         `json:"message" example:"success"`
-	Data    phylax.CreateChallengeResponse `json:"data"`
+	Error   bool                                       `json:"error" example:"false"`
+	Message string                                     `json:"message" example:"success"`
+	Data    attestationservice.CreateChallengeResponse `json:"data"`
 }
 
 type VerifyAttestationResponse struct {
-	Error   bool                             `json:"error" example:"false"`
-	Message string                           `json:"message" example:"success"`
-	Data    phylax.VerifyAttestationResponse `json:"data"`
+	Error   bool                                         `json:"error" example:"false"`
+	Message string                                       `json:"message" example:"success"`
+	Data    attestationservice.VerifyAttestationResponse `json:"data"`
 }
 
 type IntrospectResponse struct {
-	Error   bool                      `json:"error" example:"false"`
-	Message string                    `json:"message" example:"success"`
-	Data    phylax.IntrospectResponse `json:"data"`
+	Error   bool                                  `json:"error" example:"false"`
+	Message string                                `json:"message" example:"success"`
+	Data    attestationservice.IntrospectResponse `json:"data"`
 }

@@ -2,11 +2,9 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"os"
+	"strconv"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -90,20 +88,10 @@ type FirebaseConfig struct {
 	CredentialsEnv string `json:"credentials_env" mapstructure:"credentials_env"`
 }
 
-func Load(path string) (Config, error) {
-	reader := viper.New()
-	reader.SetConfigFile(path)
-	reader.SetConfigType("json")
-
+func Load() (Config, error) {
 	var cfg Config
-	if err := reader.ReadInConfig(); err != nil {
-		return Config{}, err
-	}
-	if err := reader.Unmarshal(&cfg); err != nil {
-		return Config{}, err
-	}
 	cfg.applyDefaults()
-	cfg.applyEnvOverrides()
+	cfg.loadFromEnv()
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -111,26 +99,8 @@ func Load(path string) (Config, error) {
 }
 
 func (c *Config) applyDefaults() {
-	if c.Environment == "" {
-		c.Environment = "development"
-	}
-	if c.Server.Addr == "" {
-		c.Server.Addr = ":8080"
-	}
-	if c.Storage.Driver == "" {
-		c.Storage.Driver = "memory"
-	}
 	if c.Mail.Driver == "" {
 		c.Mail.Driver = "log"
-	}
-	if c.Mail.FromName == "" {
-		c.Mail.FromName = "Phylax"
-	}
-	if c.Mail.FromEmail == "" {
-		c.Mail.FromEmail = "no-reply@phylax.local"
-	}
-	if c.Token.Issuer == "" {
-		c.Token.Issuer = "phylax"
 	}
 	if c.Token.TTLSeconds == 0 {
 		c.Token.TTLSeconds = int((15 * time.Minute).Seconds())
@@ -140,7 +110,7 @@ func (c *Config) applyDefaults() {
 	}
 }
 
-func (c *Config) applyEnvOverrides() {
+func (c *Config) loadFromEnv() {
 	if value := os.Getenv("PHYLAX_ENV"); value != "" {
 		c.Environment = value
 	}
@@ -172,7 +142,9 @@ func (c *Config) applyEnvOverrides() {
 		c.Mail.SMTPHost = value
 	}
 	if value := os.Getenv("SMTP_PORT"); value != "" {
-		fmt.Sscanf(value, "%d", &c.Mail.SMTPPort)
+		if port, err := strconv.Atoi(value); err == nil {
+			c.Mail.SMTPPort = port
+		}
 	}
 	if value := os.Getenv("SMTP_USER"); value != "" {
 		c.Mail.SMTPUser = value
@@ -186,17 +158,30 @@ func (c *Config) applyEnvOverrides() {
 	if value := os.Getenv("PHYLAX_TOKEN_SECRET"); value != "" {
 		c.Token.Secret = value
 	}
+	if value := os.Getenv("PHYLAX_TOKEN_TTL_SECONDS"); value != "" {
+		if ttl, err := strconv.Atoi(value); err == nil {
+			c.Token.TTLSeconds = ttl
+		}
+	}
+	if value := os.Getenv("PHYLAX_CHALLENGE_TTL_SECONDS"); value != "" {
+		if ttl, err := strconv.Atoi(value); err == nil {
+			c.Challenges.TTLSeconds = ttl
+		}
+	}
 }
 
 func (c Config) Validate() error {
+	if c.Environment == "" {
+		return errors.New("PHYLAX_ENV is required")
+	}
 	if c.Environment != "development" && c.Environment != "staging" && c.Environment != "production" {
 		return errors.New("environment must be development, staging, or production")
 	}
 	if c.Storage.Driver != "memory" && c.Storage.Driver != "postgres" {
 		return errors.New("storage.driver must be memory or postgres")
 	}
-	if c.Storage.Driver == "postgres" && c.Storage.DatabaseURL == "" {
-		return errors.New("DATABASE_URL is required when storage.driver is postgres")
+	if c.Storage.DatabaseURL == "" {
+		return errors.New("DATABASE_URL is required")
 	}
 	if c.Mail.Driver != "log" && c.Mail.Driver != "smtp" {
 		return errors.New("mail.driver must be log or smtp")

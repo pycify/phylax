@@ -90,8 +90,6 @@ func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
 			Provider:           string(app.Provider),
 			PackageName:        strings.TrimSpace(app.PackageName),
 			CloudProjectNumber: strings.TrimSpace(app.CloudProjectNumber),
-			// Keep strict Play recognition checks for production while allowing
-			// debug/internal testing builds in non-production environments.
 			RequirePlayRecognized: app.Environment == enum.AppEnvironmentProduction,
 			RequiredDeviceIntegrity: []string{
 				"MEETS_DEVICE_INTEGRITY",

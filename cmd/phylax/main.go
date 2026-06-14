@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -16,11 +15,10 @@ import (
 	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
 	projectservice "github.com/pycify/phylax/internal/app/services/projects"
+	"github.com/pycify/phylax/internal/app/services/store"
 	"github.com/pycify/phylax/internal/config"
 	"github.com/pycify/phylax/internal/env"
 	"github.com/pycify/phylax/internal/httpapi"
-	"github.com/pycify/phylax/internal/phylax"
-	"github.com/pycify/phylax/internal/store"
 )
 
 // @title			Phylax API
@@ -32,7 +30,6 @@ import (
 // @name						Authorization
 // @description					Type "Bearer " followed by a Phylax access token.
 func main() {
-	configPath := flag.String("config", "", "Path to Phylax JSON config")
 	envPath := flag.String("env-file", ".env", "Path to optional .env file")
 	flag.Parse()
 
@@ -43,8 +40,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	path := resolveConfigPath(*configPath)
-	cfg, err := config.Load(path)
+	if err := env.ValidateRequired(); err != nil {
+		logger.Error("invalid environment", "error", err)
+		os.Exit(1)
+	}
+
+	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("failed to load config", "error", err)
 		os.Exit(1)
@@ -64,12 +65,12 @@ func main() {
 	projectService := projectservice.NewService(projectRepository)
 	projectController := controllers.NewProjectController(projectService)
 
-	service, err := phylax.NewService(cfg, st, logger, projectService)
+	service, err := attestationservice.NewService(cfg, st, logger, projectService)
 	if err != nil {
 		logger.Error("failed to create service", "error", err)
 		os.Exit(1)
 	}
-	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
+	attestationController := controllers.NewAttestationController(service)
 
 	authRepository, err := createAuthRepository(cfg)
 	if err != nil {
@@ -111,20 +112,6 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("phylax stopped")
-}
-
-func resolveConfigPath(explicit string) string {
-	if explicit != "" {
-		return explicit
-	}
-	if value := os.Getenv("PHYLAX_CONFIG"); value != "" {
-		return value
-	}
-	envName := os.Getenv("PHYLAX_ENV")
-	if envName == "" {
-		envName = "development"
-	}
-	return filepath.Join("configs", "phylax."+envName+".json")
 }
 
 func createAuthRepository(cfg config.Config) (identityservice.AuthRepository, error) {

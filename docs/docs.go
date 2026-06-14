@@ -163,7 +163,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/phylax.VerifyAttestationRequest"
+                            "$ref": "#/definitions/attestation.VerifyAttestationRequest"
                         }
                     }
                 ],
@@ -215,7 +215,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/phylax.CreateChallengeRequest"
+                            "$ref": "#/definitions/attestation.CreateChallengeRequest"
                         }
                     }
                 ],
@@ -807,7 +807,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/phylax.IntrospectRequest"
+                            "$ref": "#/definitions/attestation.IntrospectRequest"
                         }
                     }
                 ],
@@ -835,6 +835,198 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "attestation.AttestationSession": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "app_id": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "install_id": {
+                    "type": "string"
+                },
+                "issued_at": {
+                    "type": "string"
+                },
+                "platform": {
+                    "$ref": "#/definitions/attestation.Platform"
+                },
+                "risk_level": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "attestation.CreateChallengeRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "install_id"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "install_id": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "attestation.CreateChallengeResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "app_id": {
+                    "type": "string"
+                },
+                "challenge_id": {
+                    "type": "string"
+                },
+                "cloud_project_number": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "nonce": {
+                    "type": "string"
+                },
+                "platform": {
+                    "$ref": "#/definitions/attestation.Platform"
+                }
+            }
+        },
+        "attestation.IntrospectRequest": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "attestation.IntrospectResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "session": {
+                    "$ref": "#/definitions/attestation.AttestationSession"
+                }
+            }
+        },
+        "attestation.Platform": {
+            "type": "string",
+            "enum": [
+                "android",
+                "apple",
+                "firebase"
+            ],
+            "x-enum-varnames": [
+                "PlatformAndroid",
+                "PlatformApple",
+                "PlatformFirebase"
+            ]
+        },
+        "attestation.Verdict": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "app_id": {
+                    "type": "string"
+                },
+                "attested_at": {
+                    "type": "string"
+                },
+                "challenge_id": {
+                    "type": "string"
+                },
+                "claims": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "install_id": {
+                    "type": "string"
+                },
+                "platform": {
+                    "$ref": "#/definitions/attestation.Platform"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "risk_level": {
+                    "type": "string"
+                }
+            }
+        },
+        "attestation.VerifyAttestationRequest": {
+            "type": "object",
+            "required": [
+                "challenge_id",
+                "install_id"
+            ],
+            "properties": {
+                "challenge_id": {
+                    "type": "string"
+                },
+                "install_id": {
+                    "type": "string"
+                },
+                "key_id": {
+                    "type": "string"
+                },
+                "proof": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "subject": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "attestation.VerifyAttestationResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "session": {
+                    "$ref": "#/definitions/attestation.AttestationSession"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "verdict": {
+                    "$ref": "#/definitions/attestation.Verdict"
+                }
+            }
+        },
         "enum.AppEnvironment": {
             "type": "string",
             "enum": [
@@ -998,198 +1190,6 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "maxLength": 255
-                }
-            }
-        },
-        "phylax.AttestationSession": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "app_id": {
-                    "type": "string"
-                },
-                "expires_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "install_id": {
-                    "type": "string"
-                },
-                "issued_at": {
-                    "type": "string"
-                },
-                "platform": {
-                    "$ref": "#/definitions/phylax.Platform"
-                },
-                "risk_level": {
-                    "type": "string"
-                },
-                "subject": {
-                    "type": "string"
-                }
-            }
-        },
-        "phylax.CreateChallengeRequest": {
-            "type": "object",
-            "required": [
-                "action",
-                "install_id"
-            ],
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "install_id": {
-                    "type": "string"
-                },
-                "subject": {
-                    "type": "string"
-                }
-            }
-        },
-        "phylax.CreateChallengeResponse": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "app_id": {
-                    "type": "string"
-                },
-                "challenge_id": {
-                    "type": "string"
-                },
-                "cloud_project_number": {
-                    "type": "string"
-                },
-                "expires_at": {
-                    "type": "string"
-                },
-                "nonce": {
-                    "type": "string"
-                },
-                "platform": {
-                    "$ref": "#/definitions/phylax.Platform"
-                }
-            }
-        },
-        "phylax.IntrospectRequest": {
-            "type": "object",
-            "required": [
-                "token"
-            ],
-            "properties": {
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "phylax.IntrospectResponse": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "error": {
-                    "type": "string"
-                },
-                "session": {
-                    "$ref": "#/definitions/phylax.AttestationSession"
-                }
-            }
-        },
-        "phylax.Platform": {
-            "type": "string",
-            "enum": [
-                "android",
-                "apple",
-                "firebase"
-            ],
-            "x-enum-varnames": [
-                "PlatformAndroid",
-                "PlatformApple",
-                "PlatformFirebase"
-            ]
-        },
-        "phylax.Verdict": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "app_id": {
-                    "type": "string"
-                },
-                "attested_at": {
-                    "type": "string"
-                },
-                "challenge_id": {
-                    "type": "string"
-                },
-                "claims": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "install_id": {
-                    "type": "string"
-                },
-                "platform": {
-                    "$ref": "#/definitions/phylax.Platform"
-                },
-                "provider": {
-                    "type": "string"
-                },
-                "risk_level": {
-                    "type": "string"
-                }
-            }
-        },
-        "phylax.VerifyAttestationRequest": {
-            "type": "object",
-            "required": [
-                "challenge_id",
-                "install_id"
-            ],
-            "properties": {
-                "challenge_id": {
-                    "type": "string"
-                },
-                "install_id": {
-                    "type": "string"
-                },
-                "key_id": {
-                    "type": "string"
-                },
-                "proof": {
-                    "type": "object",
-                    "additionalProperties": {}
-                },
-                "subject": {
-                    "type": "string"
-                },
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "phylax.VerifyAttestationResponse": {
-            "type": "object",
-            "properties": {
-                "expires_at": {
-                    "type": "string"
-                },
-                "session": {
-                    "$ref": "#/definitions/phylax.AttestationSession"
-                },
-                "token": {
-                    "type": "string"
-                },
-                "verdict": {
-                    "$ref": "#/definitions/phylax.Verdict"
                 }
             }
         },
@@ -1681,7 +1681,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/phylax.CreateChallengeResponse"
+                    "$ref": "#/definitions/attestation.CreateChallengeResponse"
                 },
                 "error": {
                     "type": "boolean",
@@ -1739,7 +1739,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/phylax.IntrospectResponse"
+                    "$ref": "#/definitions/attestation.IntrospectResponse"
                 },
                 "error": {
                     "type": "boolean",
@@ -1819,7 +1819,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/phylax.VerifyAttestationResponse"
+                    "$ref": "#/definitions/attestation.VerifyAttestationResponse"
                 },
                 "error": {
                     "type": "boolean",

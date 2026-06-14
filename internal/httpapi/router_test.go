@@ -11,10 +11,9 @@ import (
 	"testing"
 
 	"github.com/pycify/phylax/internal/app/controllers"
-	attestationservice "github.com/pycify/phylax/internal/app/services/attestation"
+	"github.com/pycify/phylax/internal/app/services/attestation"
+	"github.com/pycify/phylax/internal/app/services/store"
 	"github.com/pycify/phylax/internal/config"
-	"github.com/pycify/phylax/internal/phylax"
-	"github.com/pycify/phylax/internal/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,19 +33,19 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 	server := httptest.NewServer(newTestRouter(t))
 	defer server.Close()
 
-	challenge := postJSONEnvelope[phylax.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
+	challenge := postJSONEnvelope[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
 		"action":     "ai.ask",
 		"install_id": "install_123",
 	}, http.StatusCreated)
 	require.Equal(t, "123456789012", challenge.CloudProjectNumber)
 
-	verified := postJSONEnvelope[phylax.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/verify", map[string]any{
+	verified := postJSONEnvelope[attestation.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/verify", map[string]any{
 		"challenge_id": challenge.ChallengeID,
 		"install_id":   "install_123",
 		"token":        "mock",
 	}, http.StatusOK)
 
-	introspection := postJSONEnvelope[phylax.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
+	introspection := postJSONEnvelope[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
 		"token": verified.Token,
 	}, http.StatusOK)
 	require.True(t, introspection.Active, introspection.Error)
@@ -123,7 +122,7 @@ func postJSONEnvelope[T any](t *testing.T, url string, payload map[string]any, e
 
 func newTestRouter(t *testing.T) http.Handler {
 	t.Helper()
-	service, err := phylax.NewService(config.Config{
+	service, err := attestation.NewService(config.Config{
 		Environment: "development",
 		Server:      config.ServerConfig{Addr: ":8080"},
 		Storage:     config.StorageConfig{Driver: "memory"},
@@ -147,7 +146,7 @@ func newTestRouter(t *testing.T) http.Handler {
 	}})
 	require.NoError(t, err)
 	_ = context.Background()
-	attestationController := controllers.NewAttestationController(attestationservice.NewService(service))
+	attestationController := controllers.NewAttestationController(service)
 	return NewRouter(attestationController, nil, nil, nil)
 }
 
@@ -158,7 +157,7 @@ type testAppResolver struct {
 func (r testAppResolver) ResolveApp(_ context.Context, appID string) (config.AppConfig, error) {
 	app, ok := r.apps[appID]
 	if !ok {
-		return config.AppConfig{}, phylax.ErrNotFound
+		return config.AppConfig{}, attestation.ErrNotFound
 	}
 	return app, nil
 }

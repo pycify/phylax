@@ -1,4 +1,4 @@
-COVER_PKGS := ./internal/app/models/identity ./internal/app/models/projects ./internal/app/services/identity ./internal/app/services/projects ./internal/config ./internal/env ./internal/httpapi ./internal/phylax ./internal/store
+COVER_PKGS := ./internal/app/models/identity ./internal/app/models/projects ./internal/app/services/identity ./internal/app/services/projects ./internal/app/services/attestation ./internal/app/services/store ./internal/config ./internal/env ./internal/httpapi
 AIR := $(shell command -v air 2>/dev/null)
 AIR_PACKAGE ?= github.com/air-verse/air@latest
 
@@ -13,7 +13,7 @@ fmt:
 	gofmt -w cmd internal
 
 swagger:
-	go tool swag init -g main.go -d cmd/phylax,internal/httpapi,internal/phylax,internal/app/controllers,internal/app/types/dto/identity,internal/app/types/dto/projects,internal/app/validators/identity,internal/app/validators/projects,internal/app/types/enum,internal/app/types/response -o docs --parseInternal
+	go tool swag init -g main.go -d cmd/phylax,internal/httpapi,internal/app/services/attestation,internal/app/controllers,internal/app/types/dto/identity,internal/app/types/dto/projects,internal/app/validators/identity,internal/app/validators/projects,internal/app/types/enum,internal/app/types/response -o docs --parseInternal
 
 coverage:
 	go test $(COVER_PKGS) -coverprofile=coverage.out
@@ -23,7 +23,7 @@ test:
 	go test ./...
 
 run:
-	PHYLAX_ENV=development go run ./cmd/phylax
+	go run ./cmd/phylax
 
 watch:
 ifdef AIR
