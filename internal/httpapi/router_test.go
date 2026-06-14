@@ -86,6 +86,31 @@ func TestRouterValidatesChallengePayload(t *testing.T) {
 	}, http.StatusUnprocessableEntity)
 }
 
+func TestRouterRateLimitsAttestationEndpoints(t *testing.T) {
+	router, _ := newTestRouter(t)
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	for i := 0; i < 40; i++ {
+		response, err := postJSONRawWithHeaders(server.URL+"/v1/apps/demo/challenges", map[string]any{
+			"action":     "ai.ask",
+			"install_id": "install_rate",
+		}, map[string]string{"X-Forwarded-For": "10.10.10.10"})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, response.StatusCode)
+		response.Body.Close()
+	}
+
+	blocked, err := postJSONRawWithHeaders(server.URL+"/v1/apps/demo/challenges", map[string]any{
+		"action":     "ai.ask",
+		"install_id": "install_rate",
+	}, map[string]string{"X-Forwarded-For": "10.10.10.10"})
+	require.NoError(t, err)
+	defer blocked.Body.Close()
+	require.Equal(t, http.StatusTooManyRequests, blocked.StatusCode)
+	require.NotEmpty(t, blocked.Header.Get("Retry-After"))
+}
+
 func TestRouterHandlesCORSPreflight(t *testing.T) {
 	router, _ := newTestRouter(t)
 	server := httptest.NewServer(router)
@@ -155,6 +180,22 @@ func postJSONEnvelopeWithHeaders[T any](t *testing.T, url string, payload map[st
 	var decoded T
 	require.NoError(t, json.Unmarshal(envelope.Data, &decoded))
 	return decoded
+}
+
+func postJSONRawWithHeaders(url string, payload map[string]any, headers map[string]string) (*http.Response, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	return http.DefaultClient.Do(req)
 }
 
 func newTestRouter(t *testing.T) (http.Handler, string) {
