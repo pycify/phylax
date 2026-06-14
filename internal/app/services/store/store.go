@@ -38,6 +38,7 @@ type AttestationSession struct {
 	RiskLevel string    `json:"risk_level"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiresAt time.Time `json:"expires_at"`
+	RevokedAt time.Time `json:"revoked_at,omitempty"`
 }
 
 type Store interface {
@@ -45,4 +46,5 @@ type Store interface {
 	ConsumeChallenge(ctx context.Context, id string) (*Challenge, error)
 	SaveSession(ctx context.Context, session AttestationSession) error
 	FindSession(ctx context.Context, id string) (*AttestationSession, error)
+	RevokeSession(ctx context.Context, id string, revokedAt time.Time) error
 }

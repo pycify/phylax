@@ -57,5 +57,24 @@ func (s *MemoryStore) FindSession(_ context.Context, id string) (*AttestationSes
 	if !ok {
 		return nil, ErrNotFound
 	}
+	if !session.RevokedAt.IsZero() {
+		return nil, ErrNotFound
+	}
 	return &session, nil
+}
+
+func (s *MemoryStore) RevokeSession(_ context.Context, id string, revokedAt time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	session, ok := s.sessions[id]
+	if !ok {
+		return ErrNotFound
+	}
+	if !session.RevokedAt.IsZero() {
+		return ErrNotFound
+	}
+	session.RevokedAt = revokedAt
+	s.sessions[id] = session
+	return nil
 }

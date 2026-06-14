@@ -76,6 +76,66 @@ func TestServiceRejectsReusedChallenge(t *testing.T) {
 	}
 }
 
+func TestServiceRefreshAttestationRotatesSession(t *testing.T) {
+	service := newTestService(t)
+
+	initialChallenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
+		AppID:     "demo",
+		Action:    "document_ai.ask_question",
+		InstallID: "install_123",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	initialVerification, err := service.VerifyAttestation(context.Background(), VerifyAttestationRequest{
+		AppID:       "demo",
+		ChallengeID: initialChallenge.ChallengeID,
+		InstallID:   "install_123",
+		Subject:     "user_123",
+		Token:       "mock",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refreshChallenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
+		AppID:     "demo",
+		Action:    "document_ai.ask_question",
+		InstallID: "install_123",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	refreshResponse, err := service.RefreshAttestation(context.Background(), RefreshAttestationRequest{
+		AppID:        "demo",
+		CurrentToken: initialVerification.Token,
+		ChallengeID:  refreshChallenge.ChallengeID,
+		InstallID:    "install_123",
+		Token:        "mock",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refreshResponse.Token == "" {
+		t.Fatal("expected refreshed token")
+	}
+	if refreshResponse.Session.ID == initialVerification.Session.ID {
+		t.Fatal("expected refreshed session to be rotated")
+	}
+
+	oldResult := service.Introspect(context.Background(), initialVerification.Token)
+	if oldResult.Active {
+		t.Fatal("expected old token to be inactive after refresh")
+	}
+
+	newResult := service.Introspect(context.Background(), refreshResponse.Token)
+	if !newResult.Active {
+		t.Fatalf("expected refreshed token to be active: %s", newResult.Error)
+	}
+}
+
 func TestServiceVerifiesPlayIntegrityVerdict(t *testing.T) {
 	service := newRealAndroidTestService(t, fakePlayIntegrityVerifier{})
 	challenge, err := service.CreateChallenge(context.Background(), CreateChallengeRequest{
@@ -271,8 +331,20 @@ func (s *memoryTestStore) FindSession(_ context.Context, id string) (*attestatio
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	session, ok := s.sessions[id]
-	if !ok {
+	if !ok || !session.RevokedAt.IsZero() {
 		return nil, errors.New("not found")
 	}
 	return &session, nil
+}
+
+func (s *memoryTestStore) RevokeSession(_ context.Context, id string, revokedAt time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	session, ok := s.sessions[id]
+	if !ok || !session.RevokedAt.IsZero() {
+		return errors.New("not found")
+	}
+	session.RevokedAt = revokedAt
+	s.sessions[id] = session
+	return nil
 }

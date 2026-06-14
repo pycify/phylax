@@ -32,6 +32,7 @@ type AttestationSession struct {
 	RiskLevel string    `json:"risk_level"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiresAt time.Time `json:"expires_at"`
+	RevokedAt time.Time `json:"revoked_at,omitempty"`
 }
 
 type ProviderStatus struct {
@@ -89,6 +90,18 @@ type VerifyAttestationResponse struct {
 	Session   AttestationSession `json:"session"`
 	Verdict   Verdict            `json:"verdict"`
 	ExpiresAt time.Time          `json:"expires_at"`
+}
+
+type RefreshAttestationRequest struct {
+	AppID        string         `json:"-"`
+	Platform     Platform       `json:"-"`
+	CurrentToken string         `json:"current_token" validate:"required"`
+	ChallengeID  string         `json:"challenge_id" validate:"required"`
+	InstallID    string         `json:"install_id" validate:"required"`
+	Subject      string         `json:"subject,omitempty"`
+	Token        string         `json:"token,omitempty"`
+	KeyID        string         `json:"key_id,omitempty"`
+	Proof        map[string]any `json:"proof,omitempty"`
 }
 
 type IntrospectRequest struct {

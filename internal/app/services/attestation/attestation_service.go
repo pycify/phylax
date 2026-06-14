@@ -94,6 +94,51 @@ func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRe
 	if req.AppID == "" || req.ChallengeID == "" || req.InstallID == "" {
 		return VerifyAttestationResponse{}, errors.New("app_id, challenge_id, and install_id are required")
 	}
+	return s.verifyAndIssueSession(ctx, req, "")
+}
+
+func (s *Service) RefreshAttestation(ctx context.Context, req RefreshAttestationRequest) (VerifyAttestationResponse, error) {
+	if req.AppID == "" || req.CurrentToken == "" || req.ChallengeID == "" || req.InstallID == "" {
+		return VerifyAttestationResponse{}, errors.New("app_id, current_token, challenge_id, and install_id are required")
+	}
+
+	claims, err := parseSessionToken(s.cfg.Token.Secret, s.cfg.Token.Issuer, req.CurrentToken)
+	if err != nil {
+		return VerifyAttestationResponse{}, errors.New("current token is invalid")
+	}
+
+	storedCurrentSession, err := s.store.FindSession(ctx, claims.SessionID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return VerifyAttestationResponse{}, errors.New("current session not found")
+		}
+		return VerifyAttestationResponse{}, err
+	}
+	currentSession := sessionFromStore(*storedCurrentSession)
+	if time.Now().UTC().After(currentSession.ExpiresAt) {
+		return VerifyAttestationResponse{}, errors.New("current session expired")
+	}
+	if currentSession.AppID != req.AppID || currentSession.InstallID != req.InstallID {
+		return VerifyAttestationResponse{}, errors.New("current session does not match app or install")
+	}
+
+	verifyRequest := VerifyAttestationRequest{
+		AppID:       req.AppID,
+		ChallengeID: req.ChallengeID,
+		InstallID:   req.InstallID,
+		Subject:     req.Subject,
+		Token:       req.Token,
+		KeyID:       req.KeyID,
+		Proof:       req.Proof,
+	}
+	if verifyRequest.Subject == "" {
+		verifyRequest.Subject = currentSession.Subject
+	}
+
+	return s.verifyAndIssueSession(ctx, verifyRequest, currentSession.ID)
+}
+
+func (s *Service) verifyAndIssueSession(ctx context.Context, req VerifyAttestationRequest, previousSessionID string) (VerifyAttestationResponse, error) {
 	app, err := s.resolveApp(ctx, req.AppID)
 	if err != nil {
 		return VerifyAttestationResponse{}, err
@@ -146,6 +191,11 @@ func (s *Service) VerifyAttestation(ctx context.Context, req VerifyAttestationRe
 	token, err := signSessionToken(s.cfg.Token.Secret, s.cfg.Token.Issuer, session)
 	if err != nil {
 		return VerifyAttestationResponse{}, err
+	}
+	if previousSessionID != "" {
+		if err := s.store.RevokeSession(ctx, previousSessionID, now); err != nil {
+			return VerifyAttestationResponse{}, err
+		}
 	}
 
 	return VerifyAttestationResponse{
@@ -264,6 +314,7 @@ func sessionToStore(session AttestationSession) attestationstore.AttestationSess
 		RiskLevel: session.RiskLevel,
 		IssuedAt:  session.IssuedAt,
 		ExpiresAt: session.ExpiresAt,
+		RevokedAt: session.RevokedAt,
 	}
 }
 
@@ -278,5 +329,6 @@ func sessionFromStore(session attestationstore.AttestationSession) AttestationSe
 		RiskLevel: session.RiskLevel,
 		IssuedAt:  session.IssuedAt,
 		ExpiresAt: session.ExpiresAt,
+		RevokedAt: session.RevokedAt,
 	}
 }

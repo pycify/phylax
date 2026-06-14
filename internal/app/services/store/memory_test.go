@@ -59,6 +59,12 @@ func TestMemoryStoreSessionLifecycle(t *testing.T) {
 	if found.ID != session.ID {
 		t.Fatalf("expected session %q, got %q", session.ID, found.ID)
 	}
+	if err := st.RevokeSession(context.Background(), session.ID, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.FindSession(context.Background(), session.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected revoked session not found, got %v", err)
+	}
 }
 
 func TestFactoryCreatesMemoryStore(t *testing.T) {

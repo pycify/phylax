@@ -28,22 +28,22 @@ The mobile SDK proves the app instance is valid. The backend SDK makes that proo
 
 Working:
 
-- [X] Project creation
-- [X] Android app creation with Play Integrity provider
-- [X] Play Integrity setup and credential flow
-- [X] Flutter client can initialize Phylax
-- [X] Flutter client can call attest
-- [X] Phylax can create a challenge
-- [X] Phylax can verify Play Integrity attestation
-- [X] Phylax can issue a session token
-- [X] Phylax can introspect a session token
+- [x] Project creation
+- [x] Android app creation with Play Integrity provider
+- [x] Play Integrity setup and credential flow
+- [x] Flutter client can initialize Phylax
+- [x] Flutter client can call attest
+- [x] Phylax can create a challenge
+- [x] Phylax can verify Play Integrity attestation
+- [x] Phylax can issue a session token
+- [x] Phylax can introspect a session token
 
 Missing for the full developer story:
 
-- [ ] Backend service-to-service authentication
-- [ ] Official backend SDK/middleware
-- [ ] Clear protected-route integration docs
-- [ ] Production-grade token lifecycle guidance for mobile clients
+- [x] Backend service-to-service authentication
+- [x] Official backend SDK/middleware
+- [x] Clear protected-route integration docs
+- [x] Production-grade token lifecycle guidance for mobile clients
 - [ ] iOS/App Attest real verification
 - [ ] Firebase App Check real verification
 
@@ -140,13 +140,13 @@ Developers need a short path from "I installed Phylax" to "my API is protected."
 
 Write docs for:
 
-- What the mobile app sends to the backend
-- What the backend validates
-- How to create a project API key
-- How to install and configure `phylax-go`
-- How to protect one route
-- How to access the attestation session in a handler
-- Recommended failure behavior for missing/inactive tokens
+- [x] What the mobile app sends to the backend
+- [x] What the backend validates
+- [x] How to create a project API key
+- [x] How to install and configure `phylax-go`
+- [x] How to protect one route
+- [x] How to access the attestation session in a handler
+- [x] Recommended failure behavior for missing/inactive tokens
 
 Minimum docs should include:
 
@@ -157,6 +157,10 @@ X-Phylax-Token: PHYLAX_SESSION_TOKEN
 and a complete backend example.
 
 Deliverable: a developer can follow docs without reading Phylax internals.
+
+Reference implementation and examples are in:
+
+- [docs/protected-route-integration.md](docs/protected-route-integration.md)
 
 ## Phase 4 - Flutter SDK Productization
 
@@ -174,6 +178,10 @@ You have already proven the Flutter flow works. Now turn that into the official 
 - Optional HTTP interceptor that adds `X-Phylax-Token`
 
 Deliverable: Flutter developers can add Phylax to a client app without manually wiring challenge and verify calls.
+
+Reference guidance is in:
+
+- [docs/mobile-token-lifecycle-guidance.md](docs/mobile-token-lifecycle-guidance.md)
 
 ## Phase 5 - Provider Completeness
 

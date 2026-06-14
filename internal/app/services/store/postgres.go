@@ -96,7 +96,7 @@ func (s *PostgresStore) SaveSession(ctx context.Context, session AttestationSess
 
 func (s *PostgresStore) FindSession(ctx context.Context, id string) (*AttestationSession, error) {
 	var model sessionModel
-	err := s.db.WithContext(ctx).First(&model, "id = ?", id).Error
+	err := s.db.WithContext(ctx).First(&model, "id = ? AND revoked_at IS NULL", id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
@@ -105,6 +105,20 @@ func (s *PostgresStore) FindSession(ctx context.Context, id string) (*Attestatio
 	}
 	session := sessionFromModel(model)
 	return &session, nil
+}
+
+func (s *PostgresStore) RevokeSession(ctx context.Context, id string, revokedAt time.Time) error {
+	result := s.db.WithContext(ctx).
+		Model(&sessionModel{}).
+		Where("id = ? AND revoked_at IS NULL", id).
+		Update("revoked_at", revokedAt)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func challengeToModel(challenge Challenge) *challengeModel {
@@ -147,6 +161,10 @@ func sessionToModel(session AttestationSession) *sessionModel {
 	if session.Subject != "" {
 		subject = &session.Subject
 	}
+	var revokedAt *time.Time
+	if !session.RevokedAt.IsZero() {
+		revokedAt = &session.RevokedAt
+	}
 	return &sessionModel{
 		ID:        session.ID,
 		AppID:     session.AppID,
@@ -157,6 +175,7 @@ func sessionToModel(session AttestationSession) *sessionModel {
 		RiskLevel: session.RiskLevel,
 		IssuedAt:  session.IssuedAt,
 		ExpiresAt: session.ExpiresAt,
+		RevokedAt: revokedAt,
 	}
 }
 
@@ -173,6 +192,9 @@ func sessionFromModel(model sessionModel) AttestationSession {
 	}
 	if model.Subject != nil {
 		session.Subject = *model.Subject
+	}
+	if model.RevokedAt != nil {
+		session.RevokedAt = *model.RevokedAt
 	}
 	return session
 }

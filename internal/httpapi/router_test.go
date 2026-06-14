@@ -52,8 +52,26 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 		"token":        "mock",
 	}, http.StatusOK)
 
-	introspection := postJSONEnvelopeWithHeaders[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
+	refreshChallenge := postJSONEnvelope[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
+		"action":     "ai.ask",
+		"install_id": "install_123",
+	}, http.StatusCreated)
+
+	refreshed := postJSONEnvelope[attestation.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/refresh", map[string]any{
+		"current_token": verified.Token,
+		"challenge_id":  refreshChallenge.ChallengeID,
+		"install_id":    "install_123",
+		"token":         "mock",
+	}, http.StatusOK)
+	require.NotEqual(t, verified.Session.ID, refreshed.Session.ID)
+
+	rotatedIntrospection := postJSONEnvelopeWithHeaders[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
 		"token": verified.Token,
+	}, map[string]string{"Authorization": "Bearer " + apiKey}, http.StatusOK)
+	require.False(t, rotatedIntrospection.Active)
+
+	introspection := postJSONEnvelopeWithHeaders[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
+		"token": refreshed.Token,
 	}, map[string]string{"Authorization": "Bearer " + apiKey}, http.StatusOK)
 	require.True(t, introspection.Active, introspection.Error)
 }

@@ -79,6 +79,33 @@ func (c *AttestationController) VerifyAttestation(w http.ResponseWriter, req *ht
 	helper.WriteJSON(w, http.StatusOK, response)
 }
 
+// RefreshAttestation godoc
+//
+//	@Summary	Refresh a Phylax session token using fresh attestation
+//	@Tags		Attestation
+//	@Accept		json
+//	@Produce	json
+//	@Param		app_id	path		string							true	"App id"
+//	@Param		payload	body		attestation.RefreshAttestationRequest	true	"Refresh attestation payload"
+//	@Success	200		{object}	response.VerifyAttestationResponse
+//	@Failure	400		{object}	response.ErrorResponse
+//	@Failure	422		{object}	response.ErrorResponse
+//	@Router		/v1/apps/{app_id}/attestations/refresh [post]
+func (c *AttestationController) RefreshAttestation(w http.ResponseWriter, req *http.Request) {
+	var payload attestationservice.RefreshAttestationRequest
+	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
+		return
+	}
+	payload.AppID = chi.URLParam(req, "app_id")
+
+	response, err := c.service.RefreshAttestation(req.Context(), payload)
+	if err != nil {
+		helper.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, response)
+}
+
 // Introspect godoc
 //
 //	@Summary	Verify a Phylax session token

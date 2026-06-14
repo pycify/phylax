@@ -10,5 +10,6 @@ import (
 func RegisterAttestationRoutes(router chi.Router, controller *controllers.AttestationController, projectService *projectservice.Service) {
 	router.Post("/v1/apps/{app_id}/challenges", controller.CreateChallenge)
 	router.Post("/v1/apps/{app_id}/attestations/verify", controller.VerifyAttestation)
+	router.Post("/v1/apps/{app_id}/attestations/refresh", controller.RefreshAttestation)
 	router.With(middleware.ProjectAPIKey(projectService)).Post("/v1/sessions/introspect", controller.Introspect)
 }
