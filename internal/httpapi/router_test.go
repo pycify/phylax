@@ -9,16 +9,22 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/pycify/phylax/internal/app/controllers"
+	projectmodels "github.com/pycify/phylax/internal/app/models/projects"
 	"github.com/pycify/phylax/internal/app/services/attestation"
+	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	"github.com/pycify/phylax/internal/app/services/store"
+	"github.com/pycify/phylax/internal/app/types/enum"
+	projectvalidators "github.com/pycify/phylax/internal/app/validators/projects"
 	"github.com/pycify/phylax/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRouterHealthAndOpenAPI(t *testing.T) {
-	server := httptest.NewServer(newTestRouter(t))
+	router, _ := newTestRouter(t)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	for _, path := range []string{"/v1/health", "/v1/openapi.json"} {
@@ -30,7 +36,8 @@ func TestRouterHealthAndOpenAPI(t *testing.T) {
 }
 
 func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
-	server := httptest.NewServer(newTestRouter(t))
+	router, apiKey := newTestRouter(t)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	challenge := postJSONEnvelope[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
@@ -45,14 +52,15 @@ func TestRouterChallengeVerifyAndIntrospect(t *testing.T) {
 		"token":        "mock",
 	}, http.StatusOK)
 
-	introspection := postJSONEnvelope[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
+	introspection := postJSONEnvelopeWithHeaders[attestation.IntrospectResponse](t, server.URL+"/v1/sessions/introspect", map[string]any{
 		"token": verified.Token,
-	}, http.StatusOK)
+	}, map[string]string{"Authorization": "Bearer " + apiKey}, http.StatusOK)
 	require.True(t, introspection.Active, introspection.Error)
 }
 
 func TestRouterValidatesChallengePayload(t *testing.T) {
-	server := httptest.NewServer(newTestRouter(t))
+	router, _ := newTestRouter(t)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	_ = postJSON[map[string]any](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
@@ -61,7 +69,8 @@ func TestRouterValidatesChallengePayload(t *testing.T) {
 }
 
 func TestRouterHandlesCORSPreflight(t *testing.T) {
-	server := httptest.NewServer(newTestRouter(t))
+	router, _ := newTestRouter(t)
+	server := httptest.NewServer(router)
 	defer server.Close()
 
 	req, err := http.NewRequest(http.MethodOptions, server.URL+"/v1/health", nil)
@@ -97,10 +106,20 @@ func postJSON[T any](t *testing.T, url string, payload map[string]any, expectedS
 }
 
 func postJSONEnvelope[T any](t *testing.T, url string, payload map[string]any, expectedStatus int) T {
+	return postJSONEnvelopeWithHeaders[T](t, url, payload, nil, expectedStatus)
+}
+
+func postJSONEnvelopeWithHeaders[T any](t *testing.T, url string, payload map[string]any, headers map[string]string, expectedStatus int) T {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	require.NoError(t, err)
-	response, err := http.Post(url, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	response, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer response.Body.Close()
 	if response.StatusCode != expectedStatus {
@@ -120,8 +139,29 @@ func postJSONEnvelope[T any](t *testing.T, url string, payload map[string]any, e
 	return decoded
 }
 
-func newTestRouter(t *testing.T) http.Handler {
+func newTestRouter(t *testing.T) (http.Handler, string) {
 	t.Helper()
+	projectRepo := projectservice.NewMemoryRepository()
+	projectService := projectservice.NewService(projectRepo)
+	created, err := projectService.CreateProject(context.Background(), "user_1", projectvalidators.CreateProjectRequest{
+		Name: "Demo",
+		Slug: "demo",
+	})
+	require.NoError(t, err)
+	now := time.Now().UTC()
+	require.NoError(t, projectRepo.CreateApp(context.Background(), projectmodels.ProjectApp{
+		ID:                 "demo",
+		ProjectID:          created.ID,
+		Name:               "Demo Android",
+		Platform:           enum.AppPlatformAndroid,
+		Provider:           enum.AppProviderPlayIntegrity,
+		Environment:        enum.AppEnvironmentDevelopment,
+		PackageName:        "com.example.demo",
+		CloudProjectNumber: "123456789012",
+		Enabled:            true,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}))
 	service, err := attestation.NewService(config.Config{
 		Environment: "development",
 		Server:      config.ServerConfig{Addr: ":8080"},
@@ -146,8 +186,8 @@ func newTestRouter(t *testing.T) http.Handler {
 	}})
 	require.NoError(t, err)
 	_ = context.Background()
-	attestationController := controllers.NewAttestationController(service)
-	return NewRouter(attestationController, nil, nil, nil)
+	attestationController := controllers.NewAttestationControllerWithProjects(service, projectService)
+	return NewRouter(attestationController, nil, projectService, nil, nil), created.APIKey.Plaintext
 }
 
 type testAppResolver struct {

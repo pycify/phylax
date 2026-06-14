@@ -385,6 +385,34 @@ definitions:
     - name
     - slug
     type: object
+  projects.ProjectAPIKeyDTO:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+      project_id:
+        type: string
+      revoked_at:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  projects.ProjectAPIKeyResponse:
+    properties:
+      api_key:
+        $ref: '#/definitions/projects.ProjectAPIKeyDTO'
+    type: object
   projects.ProjectAppDTO:
     properties:
       bundle_id:
@@ -423,6 +451,13 @@ definitions:
         items:
           $ref: '#/definitions/projects.ProjectAppDTO'
         type: array
+    type: object
+  projects.ProjectCreatedResponse:
+    properties:
+      api_key:
+        $ref: '#/definitions/projects.ProjectAPIKeyDTO'
+      project:
+        $ref: '#/definitions/projects.ProjectDTO'
     type: object
   projects.ProjectDTO:
     properties:
@@ -620,6 +655,17 @@ definitions:
         example: success
         type: string
     type: object
+  response.ProjectAPIKeyResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectAPIKeyResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
   response.ProjectAppResponse:
     properties:
       data:
@@ -635,6 +681,17 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/projects.ProjectAppsResponse'
+      error:
+        example: false
+        type: boolean
+      message:
+        example: success
+        type: string
+    type: object
+  response.ProjectCreatedResponse:
+    properties:
+      data:
+        $ref: '#/definitions/projects.ProjectCreatedResponse'
       error:
         example: false
         type: boolean
@@ -1027,7 +1084,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.ProjectResponse'
+            $ref: '#/definitions/response.ProjectCreatedResponse'
         "400":
           description: Bad Request
           schema:
@@ -1117,6 +1174,75 @@ paths:
       summary: Update project
       tags:
       - Projects
+  /v1/projects/{project_id}/api-key:
+    delete:
+      parameters:
+      - description: Project id
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke active project API key
+      tags:
+      - Project API Keys
+    get:
+      parameters:
+      - description: Project id
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ProjectAPIKeyResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get active project API key metadata
+      tags:
+      - Project API Keys
+  /v1/projects/{project_id}/api-key/rotate:
+    post:
+      parameters:
+      - description: Project id
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ProjectAPIKeyResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate project API key
+      tags:
+      - Project API Keys
   /v1/projects/{project_id}/apps:
     get:
       parameters:
@@ -1194,6 +1320,8 @@ paths:
           description: Unprocessable Entity
           schema:
             $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Verify a Phylax session token
       tags:
       - Sessions

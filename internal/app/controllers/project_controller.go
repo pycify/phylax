@@ -31,7 +31,7 @@ func NewProjectController(service *projectservice.Service) *ProjectController {
 //	@Produce	json
 //	@Security	BearerAuth
 //	@Param		payload				body		projects.CreateProjectRequest		true	"Project payload"
-//	@Success	201					{object}	response.ProjectResponse
+//	@Success	201					{object}	response.ProjectCreatedResponse
 //	@Failure	400					{object}	response.ErrorResponse
 //	@Failure	422					{object}	response.ErrorResponse
 //	@Router		/v1/projects [post]
@@ -44,12 +44,15 @@ func (c *ProjectController) CreateProject(w http.ResponseWriter, req *http.Reque
 	if !helper.DecodeAndValidate(w, req, c.validate, &payload) {
 		return
 	}
-	project, err := c.service.CreateProject(req.Context(), userID, payload)
+	created, err := c.service.CreateProject(req.Context(), userID, payload)
 	if err != nil {
 		helper.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	helper.WriteJSON(w, http.StatusCreated, projectdto.ProjectResponse{Project: projectdto.NewProjectDTO(project)})
+	helper.WriteJSON(w, http.StatusCreated, projectdto.ProjectCreatedResponse{
+		Project: projectdto.NewProjectDTO(created.Project),
+		APIKey:  projectdto.NewProjectAPIKeyDTO(created.APIKey),
+	})
 }
 
 // ListProjects godoc
@@ -146,6 +149,74 @@ func (c *ProjectController) DeleteProject(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	if err := c.service.DeleteProject(req.Context(), userID, chi.URLParam(req, "project_id")); err != nil {
+		helper.WriteServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetProjectAPIKey godoc
+//
+//	@Summary	Get active project API key metadata
+//	@Tags		Project API Keys
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		project_id	path		string	true	"Project id"
+//	@Success	200			{object}	response.ProjectAPIKeyResponse
+//	@Failure	404			{object}	response.ErrorResponse
+//	@Router		/v1/projects/{project_id}/api-key [get]
+func (c *ProjectController) GetProjectAPIKey(w http.ResponseWriter, req *http.Request) {
+	userID, ok := helper.RequireUserID(w, req)
+	if !ok {
+		return
+	}
+	apiKey, err := c.service.GetProjectAPIKey(req.Context(), userID, chi.URLParam(req, "project_id"))
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, projectdto.ProjectAPIKeyResponse{APIKey: projectdto.NewProjectAPIKeyDTO(*apiKey)})
+}
+
+// RotateProjectAPIKey godoc
+//
+//	@Summary	Rotate project API key
+//	@Tags		Project API Keys
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		project_id	path		string	true	"Project id"
+//	@Success	200			{object}	response.ProjectAPIKeyResponse
+//	@Failure	404			{object}	response.ErrorResponse
+//	@Router		/v1/projects/{project_id}/api-key/rotate [post]
+func (c *ProjectController) RotateProjectAPIKey(w http.ResponseWriter, req *http.Request) {
+	userID, ok := helper.RequireUserID(w, req)
+	if !ok {
+		return
+	}
+	apiKey, err := c.service.RotateProjectAPIKey(req.Context(), userID, chi.URLParam(req, "project_id"))
+	if err != nil {
+		helper.WriteServiceError(w, err)
+		return
+	}
+	helper.WriteJSON(w, http.StatusOK, projectdto.ProjectAPIKeyResponse{APIKey: projectdto.NewProjectAPIKeyDTO(*apiKey)})
+}
+
+// RevokeProjectAPIKey godoc
+//
+//	@Summary	Revoke active project API key
+//	@Tags		Project API Keys
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Param		project_id	path	string	true	"Project id"
+//	@Success	204
+//	@Failure	404	{object}	response.ErrorResponse
+//	@Router		/v1/projects/{project_id}/api-key [delete]
+func (c *ProjectController) RevokeProjectAPIKey(w http.ResponseWriter, req *http.Request) {
+	userID, ok := helper.RequireUserID(w, req)
+	if !ok {
+		return
+	}
+	if err := c.service.RevokeProjectAPIKey(req.Context(), userID, chi.URLParam(req, "project_id")); err != nil {
 		helper.WriteServiceError(w, err)
 		return
 	}

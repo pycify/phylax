@@ -70,7 +70,7 @@ func main() {
 		logger.Error("failed to create service", "error", err)
 		os.Exit(1)
 	}
-	attestationController := controllers.NewAttestationController(service)
+	attestationController := controllers.NewAttestationControllerWithProjects(service, projectService)
 
 	authRepository, err := createAuthRepository(cfg)
 	if err != nil {
@@ -85,7 +85,7 @@ func main() {
 	authService := identityservice.NewAuthService(authRepository, otpStore, createMailer(cfg, logger))
 	authController := controllers.NewAuthController(authService)
 
-	handler := httpapi.NewRouter(attestationController, authService, authController, projectController)
+	handler := httpapi.NewRouter(attestationController, authService, projectService, authController, projectController)
 	server := &http.Server{
 		Addr:              cfg.Server.Addr,
 		Handler:           handler,

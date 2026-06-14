@@ -10,6 +10,7 @@ import (
 func TestProjectTableNames(t *testing.T) {
 	require.Equal(t, "projects", Project{}.TableName())
 	require.Equal(t, "project_members", ProjectMember{}.TableName())
+	require.Equal(t, "project_api_keys", ProjectAPIKey{}.TableName())
 	require.Equal(t, "project_apps", ProjectApp{}.TableName())
 	require.Equal(t, "app_credentials", AppCredential{}.TableName())
 }

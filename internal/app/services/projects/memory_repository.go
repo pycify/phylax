@@ -12,6 +12,7 @@ import (
 type MemoryRepository struct {
 	mu          sync.RWMutex
 	projects    map[string]projectmodels.Project
+	apiKeys     map[string]projectmodels.ProjectAPIKey
 	apps        map[string]projectmodels.ProjectApp
 	credentials map[string]projectmodels.AppCredential
 }
@@ -19,6 +20,7 @@ type MemoryRepository struct {
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
 		projects:    map[string]projectmodels.Project{},
+		apiKeys:     map[string]projectmodels.ProjectAPIKey{},
 		apps:        map[string]projectmodels.ProjectApp{},
 		credentials: map[string]projectmodels.AppCredential{},
 	}
@@ -28,6 +30,14 @@ func (r *MemoryRepository) CreateProject(_ context.Context, project projectmodel
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.projects[project.ID] = project
+	return nil
+}
+
+func (r *MemoryRepository) CreateProjectWithAPIKey(_ context.Context, project projectmodels.Project, key projectmodels.ProjectAPIKey) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.projects[project.ID] = project
+	r.apiKeys[key.ID] = key
 	return nil
 }
 
@@ -81,6 +91,103 @@ func (r *MemoryRepository) DeleteProject(_ context.Context, ownerUserID string, 
 			r.apps[appID] = app
 		}
 	}
+	for keyID, key := range r.apiKeys {
+		if key.ProjectID == projectID && key.DeletedAt.Time.IsZero() {
+			key.Active = false
+			key.RevokedAt = &now
+			key.UpdatedAt = now
+			key.DeletedAt.Time = now
+			key.DeletedAt.Valid = true
+			r.apiKeys[keyID] = key
+		}
+	}
+	return nil
+}
+
+func (r *MemoryRepository) FindActiveProjectAPIKey(_ context.Context, ownerUserID string, projectID string) (*projectmodels.ProjectAPIKey, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	project, ok := r.projects[projectID]
+	if !ok || project.OwnerUserID != ownerUserID || !project.DeletedAt.Time.IsZero() {
+		return nil, ErrProjectNotFound
+	}
+	for _, key := range r.apiKeys {
+		if key.ProjectID == projectID && key.Active && key.RevokedAt == nil && key.DeletedAt.Time.IsZero() {
+			return &key, nil
+		}
+	}
+	return nil, ErrAPIKeyNotFound
+}
+
+func (r *MemoryRepository) RotateProjectAPIKey(_ context.Context, ownerUserID string, projectID string, key projectmodels.ProjectAPIKey) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	project, ok := r.projects[projectID]
+	if !ok || project.OwnerUserID != ownerUserID || !project.DeletedAt.Time.IsZero() {
+		return ErrProjectNotFound
+	}
+	now := time.Now().UTC()
+	for keyID, existing := range r.apiKeys {
+		if existing.ProjectID == projectID && existing.Active && existing.DeletedAt.Time.IsZero() {
+			existing.Active = false
+			existing.RevokedAt = &now
+			existing.UpdatedAt = now
+			r.apiKeys[keyID] = existing
+		}
+	}
+	r.apiKeys[key.ID] = key
+	return nil
+}
+
+func (r *MemoryRepository) RevokeProjectAPIKey(_ context.Context, ownerUserID string, projectID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	project, ok := r.projects[projectID]
+	if !ok || project.OwnerUserID != ownerUserID || !project.DeletedAt.Time.IsZero() {
+		return ErrProjectNotFound
+	}
+	now := time.Now().UTC()
+	revoked := false
+	for keyID, key := range r.apiKeys {
+		if key.ProjectID == projectID && key.Active && key.RevokedAt == nil && key.DeletedAt.Time.IsZero() {
+			key.Active = false
+			key.RevokedAt = &now
+			key.UpdatedAt = now
+			r.apiKeys[keyID] = key
+			revoked = true
+		}
+	}
+	if !revoked {
+		return ErrAPIKeyNotFound
+	}
+	return nil
+}
+
+func (r *MemoryRepository) FindActiveProjectAPIKeyByHash(_ context.Context, keyHash string) (*projectmodels.ProjectAPIKey, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, key := range r.apiKeys {
+		if key.KeyHash == keyHash && key.Active && key.RevokedAt == nil && key.DeletedAt.Time.IsZero() {
+			project, ok := r.projects[key.ProjectID]
+			if !ok || !project.DeletedAt.Time.IsZero() {
+				return nil, ErrAPIKeyNotFound
+			}
+			return &key, nil
+		}
+	}
+	return nil, ErrAPIKeyNotFound
+}
+
+func (r *MemoryRepository) MarkProjectAPIKeyUsed(_ context.Context, keyID string, usedAt time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	key, ok := r.apiKeys[keyID]
+	if !ok {
+		return ErrAPIKeyNotFound
+	}
+	key.LastUsedAt = &usedAt
+	key.UpdatedAt = usedAt
+	r.apiKeys[keyID] = key
 	return nil
 }
 

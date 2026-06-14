@@ -20,6 +20,8 @@ func TestProjectServiceCreatesProjectAndNestedApps(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "user_1", project.OwnerUserID)
+	require.NotEmpty(t, project.APIKey.Plaintext)
+	require.Equal(t, project.ID, project.APIKey.ProjectID)
 
 	app, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
 		Name:               "Acme Android",
@@ -35,6 +37,40 @@ func TestProjectServiceCreatesProjectAndNestedApps(t *testing.T) {
 	apps, err := service.ListApps(ctx, "user_1", project.ID)
 	require.NoError(t, err)
 	require.Len(t, apps, 1)
+}
+
+func TestProjectServiceRotatesAndRevokesProjectAPIKey(t *testing.T) {
+	service := NewService(NewMemoryRepository())
+	ctx := context.Background()
+
+	project, err := service.CreateProject(ctx, "user_1", projectvalidators.CreateProjectRequest{
+		Name: "Acme",
+		Slug: "acme",
+	})
+	require.NoError(t, err)
+	firstKey := project.APIKey.Plaintext
+
+	authenticated, err := service.AuthenticateProjectAPIKey(ctx, firstKey)
+	require.NoError(t, err)
+	require.Equal(t, project.ID, authenticated.ProjectID)
+
+	rotated, err := service.RotateProjectAPIKey(ctx, "user_1", project.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, rotated.Plaintext)
+	require.NotEqual(t, firstKey, rotated.Plaintext)
+
+	_, err = service.AuthenticateProjectAPIKey(ctx, firstKey)
+	require.ErrorIs(t, err, ErrInvalidAPIKey)
+
+	authenticated, err = service.AuthenticateProjectAPIKey(ctx, rotated.Plaintext)
+	require.NoError(t, err)
+	require.Equal(t, project.ID, authenticated.ProjectID)
+
+	require.NoError(t, service.RevokeProjectAPIKey(ctx, "user_1", project.ID))
+	_, err = service.AuthenticateProjectAPIKey(ctx, rotated.Plaintext)
+	require.ErrorIs(t, err, ErrInvalidAPIKey)
+	_, err = service.GetProjectAPIKey(ctx, "user_1", project.ID)
+	require.ErrorIs(t, err, ErrAPIKeyNotFound)
 }
 
 func TestProjectServiceEnforcesOwnership(t *testing.T) {

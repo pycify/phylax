@@ -10,12 +10,14 @@ import (
 	helper "github.com/pycify/phylax/internal/app/helper"
 	approutes "github.com/pycify/phylax/internal/app/routes"
 	identityservice "github.com/pycify/phylax/internal/app/services/identity"
+	projectservice "github.com/pycify/phylax/internal/app/services/projects"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Router struct {
 	router                chi.Router
 	authService           *identityservice.AuthService
+	projectService        *projectservice.Service
 	authController        *controllers.AuthController
 	projects              *controllers.ProjectController
 	attestationController *controllers.AttestationController
@@ -24,12 +26,14 @@ type Router struct {
 func NewRouter(
 	attestationController *controllers.AttestationController,
 	authService *identityservice.AuthService,
+	projectService *projectservice.Service,
 	authController *controllers.AuthController,
 	projectController *controllers.ProjectController,
 ) http.Handler {
 	router := &Router{
 		router:                chi.NewRouter(),
 		authService:           authService,
+		projectService:        projectService,
 		authController:        authController,
 		projects:              projectController,
 		attestationController: attestationController,
@@ -49,7 +53,7 @@ func (r *Router) routes() {
 	r.router.Get("/v1/health", r.health)
 	r.router.Get("/v1/openapi.json", r.openapi)
 	if r.attestationController != nil {
-		approutes.RegisterAttestationRoutes(r.router, r.attestationController)
+		approutes.RegisterAttestationRoutes(r.router, r.attestationController, r.projectService)
 	}
 	if r.authController != nil && r.authService != nil {
 		approutes.RegisterAuthRoutes(r.router, r.authController, r.authService)

@@ -55,6 +55,28 @@ create table if not exists projects (
 create index if not exists projects_owner_user_id_idx on projects (owner_user_id);
 create index if not exists projects_deleted_at_idx on projects (deleted_at);
 
+create table if not exists project_api_keys (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects (id) on delete cascade,
+  name text not null,
+  prefix text not null,
+  key_hash text not null unique,
+  active boolean not null default true,
+  last_used_at timestamptz,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  revoked_at timestamptz,
+  deleted_at timestamptz
+);
+
+create unique index if not exists project_api_keys_one_active_idx
+  on project_api_keys (project_id)
+  where active = true and revoked_at is null and deleted_at is null;
+
+create index if not exists project_api_keys_project_id_idx on project_api_keys (project_id);
+create index if not exists project_api_keys_prefix_idx on project_api_keys (prefix);
+create index if not exists project_api_keys_deleted_at_idx on project_api_keys (deleted_at);
+
 create table if not exists project_members (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references projects (id) on delete cascade,

@@ -56,6 +56,19 @@ type AppCredentialDTO struct {
 	UpdatedAt      time.Time        `json:"updated_at"`
 }
 
+type ProjectAPIKeyDTO struct {
+	ID         string     `json:"id"`
+	ProjectID  string     `json:"project_id"`
+	Name       string     `json:"name"`
+	Prefix     string     `json:"prefix"`
+	Key        string     `json:"key,omitempty"`
+	Active     bool       `json:"active"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
+}
+
 func NewProjectAppDTO(app projectmodels.ProjectApp) ProjectAppDTO {
 	return ProjectAppDTO{
 		ID:                 app.ID,
@@ -86,8 +99,28 @@ func NewAppCredentialDTO(credential projectmodels.AppCredential) AppCredentialDT
 	}
 }
 
+func NewProjectAPIKeyDTO(key projectservice.ProjectAPIKey) ProjectAPIKeyDTO {
+	return ProjectAPIKeyDTO{
+		ID:         key.ID,
+		ProjectID:  key.ProjectID,
+		Name:       key.Name,
+		Prefix:     key.Prefix,
+		Key:        key.Plaintext,
+		Active:     key.Active,
+		LastUsedAt: key.LastUsedAt,
+		CreatedAt:  key.CreatedAt,
+		UpdatedAt:  key.UpdatedAt,
+		RevokedAt:  key.RevokedAt,
+	}
+}
+
 type ProjectResponse struct {
 	Project ProjectDTO `json:"project"`
+}
+
+type ProjectCreatedResponse struct {
+	Project ProjectDTO       `json:"project"`
+	APIKey  ProjectAPIKeyDTO `json:"api_key"`
 }
 
 type ProjectsResponse struct {
@@ -100,6 +133,10 @@ type ProjectAppResponse struct {
 
 type AppCredentialResponse struct {
 	Credential AppCredentialDTO `json:"credential"`
+}
+
+type ProjectAPIKeyResponse struct {
+	APIKey ProjectAPIKeyDTO `json:"api_key"`
 }
 
 type ProjectAppsResponse struct {

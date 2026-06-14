@@ -28,16 +28,24 @@ var (
 	ErrProjectNotFound       = errors.New("project not found")
 	ErrAppNotFound           = errors.New("app not found")
 	ErrAppCredentialNotFound = errors.New("app credential not found")
+	ErrAPIKeyNotFound        = errors.New("project api key not found")
+	ErrInvalidAPIKey         = errors.New("invalid project api key")
 	ErrInvalidApp            = errors.New("invalid app")
 	ErrInvalidCredential     = errors.New("invalid app credential")
 )
 
 type Repository interface {
 	CreateProject(ctx context.Context, project projectmodels.Project) error
+	CreateProjectWithAPIKey(ctx context.Context, project projectmodels.Project, key projectmodels.ProjectAPIKey) error
 	ListProjects(ctx context.Context, ownerUserID string) ([]projectmodels.Project, error)
 	FindProject(ctx context.Context, ownerUserID string, projectID string) (*projectmodels.Project, error)
 	UpdateProject(ctx context.Context, project projectmodels.Project) error
 	DeleteProject(ctx context.Context, ownerUserID string, projectID string) error
+	FindActiveProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) (*projectmodels.ProjectAPIKey, error)
+	RotateProjectAPIKey(ctx context.Context, ownerUserID string, projectID string, key projectmodels.ProjectAPIKey) error
+	RevokeProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) error
+	FindActiveProjectAPIKeyByHash(ctx context.Context, keyHash string) (*projectmodels.ProjectAPIKey, error)
+	MarkProjectAPIKeyUsed(ctx context.Context, keyID string, usedAt time.Time) error
 
 	CreateApp(ctx context.Context, app projectmodels.ProjectApp) error
 	ListApps(ctx context.Context, projectID string) ([]projectmodels.ProjectApp, error)
@@ -86,10 +94,10 @@ func appConfigFromProjectApp(app projectmodels.ProjectApp) config.AppConfig {
 	switch app.Provider {
 	case enum.AppProviderPlayIntegrity:
 		cfg.Android = config.AndroidConfig{
-			Enabled:            app.Enabled,
-			Provider:           string(app.Provider),
-			PackageName:        strings.TrimSpace(app.PackageName),
-			CloudProjectNumber: strings.TrimSpace(app.CloudProjectNumber),
+			Enabled:               app.Enabled,
+			Provider:              string(app.Provider),
+			PackageName:           strings.TrimSpace(app.PackageName),
+			CloudProjectNumber:    strings.TrimSpace(app.CloudProjectNumber),
 			RequirePlayRecognized: app.Environment == enum.AppEnvironmentProduction,
 			RequiredDeviceIntegrity: []string{
 				"MEETS_DEVICE_INTEGRITY",
@@ -130,6 +138,24 @@ func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
 }
 
+type ProjectWithAPIKey struct {
+	projectmodels.Project
+	APIKey ProjectAPIKey
+}
+
+type ProjectAPIKey struct {
+	ID         string
+	ProjectID  string
+	Name       string
+	Prefix     string
+	Plaintext  string
+	Active     bool
+	LastUsedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	RevokedAt  *time.Time
+}
+
 func (s *Service) StoreAppCredential(ctx context.Context, ownerUserID string, appID string, payload projectvalidators.StoreAppCredentialRequest) (*projectmodels.AppCredential, error) {
 	app, err := s.repository.FindAppForOwner(ctx, ownerUserID, appID)
 	if err != nil {
@@ -166,7 +192,7 @@ func (s *Service) StoreAppCredential(ctx context.Context, ownerUserID string, ap
 	return &credential, nil
 }
 
-func (s *Service) CreateProject(ctx context.Context, ownerUserID string, payload projectvalidators.CreateProjectRequest) (projectmodels.Project, error) {
+func (s *Service) CreateProject(ctx context.Context, ownerUserID string, payload projectvalidators.CreateProjectRequest) (ProjectWithAPIKey, error) {
 	now := time.Now().UTC()
 	project := projectmodels.Project{
 		ID:          uuid.NewString(),
@@ -177,7 +203,14 @@ func (s *Service) CreateProject(ctx context.Context, ownerUserID string, payload
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	return project, s.repository.CreateProject(ctx, project)
+	apiKey, err := newProjectAPIKey(project.ID, "Default")
+	if err != nil {
+		return ProjectWithAPIKey{}, err
+	}
+	if err := s.repository.CreateProjectWithAPIKey(ctx, project, apiKey.model); err != nil {
+		return ProjectWithAPIKey{}, err
+	}
+	return ProjectWithAPIKey{Project: project, APIKey: apiKey.public}, nil
 }
 
 func (s *Service) ListProjects(ctx context.Context, ownerUserID string) ([]projectmodels.Project, error) {
@@ -209,6 +242,48 @@ func (s *Service) UpdateProject(ctx context.Context, ownerUserID string, project
 
 func (s *Service) DeleteProject(ctx context.Context, ownerUserID string, projectID string) error {
 	return s.repository.DeleteProject(ctx, ownerUserID, projectID)
+}
+
+func (s *Service) GetProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) (*ProjectAPIKey, error) {
+	key, err := s.repository.FindActiveProjectAPIKey(ctx, ownerUserID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	response := projectAPIKeyFromModel(*key, "")
+	return &response, nil
+}
+
+func (s *Service) RotateProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) (*ProjectAPIKey, error) {
+	apiKey, err := newProjectAPIKey(projectID, "Default")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repository.RotateProjectAPIKey(ctx, ownerUserID, projectID, apiKey.model); err != nil {
+		return nil, err
+	}
+	return &apiKey.public, nil
+}
+
+func (s *Service) RevokeProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) error {
+	return s.repository.RevokeProjectAPIKey(ctx, ownerUserID, projectID)
+}
+
+func (s *Service) AuthenticateProjectAPIKey(ctx context.Context, plaintext string) (*projectmodels.ProjectAPIKey, error) {
+	plaintext = strings.TrimSpace(plaintext)
+	if plaintext == "" {
+		return nil, ErrInvalidAPIKey
+	}
+	key, err := s.repository.FindActiveProjectAPIKeyByHash(ctx, apiKeyHash(plaintext))
+	if err != nil {
+		return nil, ErrInvalidAPIKey
+	}
+	_ = s.repository.MarkProjectAPIKeyUsed(ctx, key.ID, time.Now().UTC())
+	return key, nil
+}
+
+func (s *Service) ProjectOwnsApp(ctx context.Context, projectID string, appID string) error {
+	_, err := s.repository.FindApp(ctx, projectID, appID)
+	return err
 }
 
 func (s *Service) CreateApp(ctx context.Context, ownerUserID string, projectID string, payload projectvalidators.CreateProjectAppRequest) (projectmodels.ProjectApp, error) {
@@ -689,6 +764,64 @@ func validateCredentialType(provider enum.AppProvider, credentialType string) er
 	return nil
 }
 
+type generatedProjectAPIKey struct {
+	model  projectmodels.ProjectAPIKey
+	public ProjectAPIKey
+}
+
+func newProjectAPIKey(projectID string, name string) (generatedProjectAPIKey, error) {
+	secret := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, secret); err != nil {
+		return generatedProjectAPIKey{}, err
+	}
+	plaintext := "phx_" + base64.RawURLEncoding.EncodeToString(secret)
+	now := time.Now().UTC()
+	model := projectmodels.ProjectAPIKey{
+		ID:        uuid.NewString(),
+		ProjectID: projectID,
+		Name:      strings.TrimSpace(name),
+		Prefix:    apiKeyPrefix(plaintext),
+		KeyHash:   apiKeyHash(plaintext),
+		Active:    true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if model.Name == "" {
+		model.Name = "Default"
+	}
+	return generatedProjectAPIKey{
+		model:  model,
+		public: projectAPIKeyFromModel(model, plaintext),
+	}, nil
+}
+
+func projectAPIKeyFromModel(key projectmodels.ProjectAPIKey, plaintext string) ProjectAPIKey {
+	return ProjectAPIKey{
+		ID:         key.ID,
+		ProjectID:  key.ProjectID,
+		Name:       key.Name,
+		Prefix:     key.Prefix,
+		Plaintext:  plaintext,
+		Active:     key.Active,
+		LastUsedAt: key.LastUsedAt,
+		CreatedAt:  key.CreatedAt,
+		UpdatedAt:  key.UpdatedAt,
+		RevokedAt:  key.RevokedAt,
+	}
+}
+
+func apiKeyPrefix(plaintext string) string {
+	if len(plaintext) <= 12 {
+		return plaintext
+	}
+	return plaintext[:12]
+}
+
+func apiKeyHash(plaintext string) string {
+	sum := sha256.Sum256([]byte(plaintext))
+	return hex.EncodeToString(sum[:])
+}
+
 func encryptCredentialSecret(secret string) (string, string, string, error) {
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
@@ -758,6 +891,15 @@ func (r *GormRepository) CreateProject(ctx context.Context, project projectmodel
 	return r.db.WithContext(ctx).Create(&project).Error
 }
 
+func (r *GormRepository) CreateProjectWithAPIKey(ctx context.Context, project projectmodels.Project, key projectmodels.ProjectAPIKey) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&project).Error; err != nil {
+			return err
+		}
+		return tx.Create(&key).Error
+	})
+}
+
 func (r *GormRepository) ListProjects(ctx context.Context, ownerUserID string) ([]projectmodels.Project, error) {
 	var projects []projectmodels.Project
 	err := r.db.WithContext(ctx).Where("owner_user_id = ?", ownerUserID).Order("created_at desc").Find(&projects).Error
@@ -789,6 +931,86 @@ func (r *GormRepository) DeleteProject(ctx context.Context, ownerUserID string, 
 		return ErrProjectNotFound
 	}
 	return nil
+}
+
+func (r *GormRepository) FindActiveProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) (*projectmodels.ProjectAPIKey, error) {
+	var key projectmodels.ProjectAPIKey
+	err := r.db.WithContext(ctx).
+		Joins("join projects on projects.id = project_api_keys.project_id").
+		Where("project_api_keys.project_id = ? and projects.owner_user_id = ? and projects.deleted_at is null and project_api_keys.active = true and project_api_keys.revoked_at is null", projectID, ownerUserID).
+		First(&key).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAPIKeyNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &key, nil
+}
+
+func (r *GormRepository) RotateProjectAPIKey(ctx context.Context, ownerUserID string, projectID string, key projectmodels.ProjectAPIKey) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var project projectmodels.Project
+		err := tx.Where("owner_user_id = ? and id = ?", ownerUserID, projectID).First(&project).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrProjectNotFound
+		}
+		if err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		if err := tx.Model(&projectmodels.ProjectAPIKey{}).
+			Where("project_id = ? and active = true and revoked_at is null", projectID).
+			Updates(map[string]any{"active": false, "revoked_at": now, "updated_at": now}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&key).Error
+	})
+}
+
+func (r *GormRepository) RevokeProjectAPIKey(ctx context.Context, ownerUserID string, projectID string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var project projectmodels.Project
+		err := tx.Where("owner_user_id = ? and id = ?", ownerUserID, projectID).First(&project).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrProjectNotFound
+		}
+		if err != nil {
+			return err
+		}
+		now := time.Now().UTC()
+		result := tx.Model(&projectmodels.ProjectAPIKey{}).
+			Where("project_id = ? and active = true and revoked_at is null", projectID).
+			Updates(map[string]any{"active": false, "revoked_at": now, "updated_at": now})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrAPIKeyNotFound
+		}
+		return nil
+	})
+}
+
+func (r *GormRepository) FindActiveProjectAPIKeyByHash(ctx context.Context, keyHash string) (*projectmodels.ProjectAPIKey, error) {
+	var key projectmodels.ProjectAPIKey
+	err := r.db.WithContext(ctx).
+		Joins("join projects on projects.id = project_api_keys.project_id").
+		Where("project_api_keys.key_hash = ? and project_api_keys.active = true and project_api_keys.revoked_at is null and projects.deleted_at is null", keyHash).
+		First(&key).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrAPIKeyNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &key, nil
+}
+
+func (r *GormRepository) MarkProjectAPIKeyUsed(ctx context.Context, keyID string, usedAt time.Time) error {
+	return r.db.WithContext(ctx).Model(&projectmodels.ProjectAPIKey{}).
+		Where("id = ?", keyID).
+		Updates(map[string]any{"last_used_at": usedAt, "updated_at": usedAt}).Error
 }
 
 func (r *GormRepository) CreateApp(ctx context.Context, app projectmodels.ProjectApp) error {

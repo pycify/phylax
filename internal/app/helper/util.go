@@ -34,7 +34,7 @@ func DecodeAndValidate(w http.ResponseWriter, req *http.Request, validate *valid
 }
 
 func WriteServiceError(w http.ResponseWriter, err error) {
-	if errors.Is(err, projectservice.ErrProjectNotFound) || errors.Is(err, projectservice.ErrAppNotFound) {
+	if errors.Is(err, projectservice.ErrProjectNotFound) || errors.Is(err, projectservice.ErrAppNotFound) || errors.Is(err, projectservice.ErrAPIKeyNotFound) {
 		WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}

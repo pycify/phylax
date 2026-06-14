@@ -9,6 +9,7 @@ import (
 func TestLoadReadsEnvironment(t *testing.T) {
 	t.Setenv("PHYLAX_ENV", "production")
 	t.Setenv("PORT", "9090")
+	t.Setenv("PHYLAX_STORAGE_DRIVER", "postgres")
 	t.Setenv("DATABASE_URL", "postgresql://example")
 	t.Setenv("PHYLAX_TOKEN_SECRET", "test-secret-with-more-than-32-bytes")
 	t.Setenv("PHYLAX_TOKEN_ISSUER", "phylax-test")
@@ -29,6 +30,7 @@ func TestLoadReadsEnvironment(t *testing.T) {
 
 func TestLoadRequiresDatabaseURL(t *testing.T) {
 	t.Setenv("PHYLAX_ENV", "development")
+	t.Setenv("PHYLAX_STORAGE_DRIVER", "postgres")
 	t.Setenv("PHYLAX_TOKEN_SECRET", "test-secret-with-more-than-32-bytes")
 
 	_, err := Load()

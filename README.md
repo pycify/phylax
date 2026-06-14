@@ -173,6 +173,11 @@ Project routes require:
 Authorization: Bearer USER_TOKEN
 ```
 
+Creating a project automatically creates its first project API key. The
+plaintext key is returned only once and should be stored by the developer's
+backend as `PHYLAX_API_KEY`. A project can have only one active API key; rotating
+the key disables the previous one.
+
 ## Endpoints
 
 ```text
@@ -193,6 +198,9 @@ GET  /v1/projects
 GET  /v1/projects/{project_id}
 PATCH /v1/projects/{project_id}
 DELETE /v1/projects/{project_id}
+GET  /v1/projects/{project_id}/api-key
+POST /v1/projects/{project_id}/api-key/rotate
+DELETE /v1/projects/{project_id}/api-key
 ```
 
 ## Persistence
@@ -262,4 +270,10 @@ Protected requests carry:
 ```http
 Authorization: Bearer USER_TOKEN
 X-Phylax-Token: PHYLAX_SESSION_TOKEN
+```
+
+Customer backends call Phylax introspection with their project API key:
+
+```http
+Authorization: Bearer PHYLAX_API_KEY
 ```

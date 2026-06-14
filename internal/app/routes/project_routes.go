@@ -16,6 +16,10 @@ func RegisterProjectRoutes(router chi.Router, controller *controllers.ProjectCon
 		router.Patch("/{project_id}", controller.UpdateProject)
 		router.Delete("/{project_id}", controller.DeleteProject)
 
+		router.Get("/{project_id}/api-key", controller.GetProjectAPIKey)
+		router.Post("/{project_id}/api-key/rotate", controller.RotateProjectAPIKey)
+		router.Delete("/{project_id}/api-key", controller.RevokeProjectAPIKey)
+
 		router.Get("/{project_id}/apps", controller.ListProjectApps)
 		router.Post("/{project_id}/apps", controller.CreateProjectApp)
 	})

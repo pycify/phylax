@@ -47,10 +47,22 @@ type ProjectResponse struct {
 	Data    projectdto.ProjectResponse `json:"data"`
 }
 
+type ProjectCreatedResponse struct {
+	Error   bool                              `json:"error" example:"false"`
+	Message string                            `json:"message" example:"success"`
+	Data    projectdto.ProjectCreatedResponse `json:"data"`
+}
+
 type ProjectsResponse struct {
 	Error   bool                        `json:"error" example:"false"`
 	Message string                      `json:"message" example:"success"`
 	Data    projectdto.ProjectsResponse `json:"data"`
+}
+
+type ProjectAPIKeyResponse struct {
+	Error   bool                             `json:"error" example:"false"`
+	Message string                           `json:"message" example:"success"`
+	Data    projectdto.ProjectAPIKeyResponse `json:"data"`
 }
 
 type ProjectAppResponse struct {

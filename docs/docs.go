@@ -566,7 +566,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.ProjectResponse"
+                            "$ref": "#/definitions/response.ProjectCreatedResponse"
                         }
                     },
                     "400": {
@@ -706,6 +706,118 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/projects/{project_id}/api-key": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Project API Keys"
+                ],
+                "summary": "Get active project API key metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project id",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProjectAPIKeyResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Project API Keys"
+                ],
+                "summary": "Revoke active project API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project id",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/projects/{project_id}/api-key/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Project API Keys"
+                ],
+                "summary": "Rotate project API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project id",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProjectAPIKeyResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/projects/{project_id}/apps": {
             "get": {
                 "security": [
@@ -790,6 +902,11 @@ const docTemplate = `{
         },
         "/v1/sessions/introspect": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -1403,6 +1520,49 @@ const docTemplate = `{
                 }
             }
         },
+        "projects.ProjectAPIKeyDTO": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "last_used_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "revoked_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "projects.ProjectAPIKeyResponse": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "$ref": "#/definitions/projects.ProjectAPIKeyDTO"
+                }
+            }
+        },
         "projects.ProjectAppDTO": {
             "type": "object",
             "properties": {
@@ -1460,6 +1620,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/projects.ProjectAppDTO"
                     }
+                }
+            }
+        },
+        "projects.ProjectCreatedResponse": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "$ref": "#/definitions/projects.ProjectAPIKeyDTO"
+                },
+                "project": {
+                    "$ref": "#/definitions/projects.ProjectDTO"
                 }
             }
         },
@@ -1751,6 +1922,22 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ProjectAPIKeyResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectAPIKeyResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
         "response.ProjectAppResponse": {
             "type": "object",
             "properties": {
@@ -1772,6 +1959,22 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/projects.ProjectAppsResponse"
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "response.ProjectCreatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/projects.ProjectCreatedResponse"
                 },
                 "error": {
                     "type": "boolean",
