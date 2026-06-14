@@ -151,6 +151,44 @@ func TestProjectServiceValidatesAppIdentifierByPlatform(t *testing.T) {
 		PackageName: "com.acme.app",
 	})
 	require.True(t, errors.Is(err, ErrInvalidApp))
+
+	_, err = service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Invalid Android Provider",
+		Platform:    enum.AppPlatformAndroid,
+		Provider:    enum.AppProviderAppAttest,
+		Environment: enum.AppEnvironmentDevelopment,
+		PackageName: "com.acme.app",
+	})
+	require.True(t, errors.Is(err, ErrInvalidApp))
+
+	_, err = service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Invalid iOS Provider",
+		Platform:    enum.AppPlatformIOS,
+		Provider:    enum.AppProviderPlayIntegrity,
+		Environment: enum.AppEnvironmentDevelopment,
+		BundleID:    "com.acme.ios",
+	})
+	require.True(t, errors.Is(err, ErrInvalidApp))
+
+	androidFirebase, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Firebase Android",
+		Platform:    enum.AppPlatformAndroid,
+		Provider:    enum.AppProviderFirebase,
+		Environment: enum.AppEnvironmentDevelopment,
+		PackageName: "com.acme.android.firebase",
+	})
+	require.NoError(t, err)
+	require.Equal(t, enum.AppProviderFirebase, androidFirebase.Provider)
+
+	iosFirebase, err := service.CreateApp(ctx, "user_1", project.ID, projectvalidators.CreateProjectAppRequest{
+		Name:        "Firebase iOS",
+		Platform:    enum.AppPlatformIOS,
+		Provider:    enum.AppProviderFirebase,
+		Environment: enum.AppEnvironmentDevelopment,
+		BundleID:    "com.acme.ios.firebase",
+	})
+	require.NoError(t, err)
+	require.Equal(t, enum.AppProviderFirebase, iosFirebase.Provider)
 }
 
 func TestProjectServiceReportsAppAttestationStatus(t *testing.T) {

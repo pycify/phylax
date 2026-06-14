@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -91,19 +92,43 @@ func TestRouterRateLimitsAttestationEndpoints(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	for i := 0; i < 40; i++ {
-		response, err := postJSONRawWithHeaders(server.URL+"/v1/apps/demo/challenges", map[string]any{
-			"action":     "ai.ask",
-			"install_id": "install_rate",
-		}, map[string]string{"X-Forwarded-For": "10.10.10.10"})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusCreated, response.StatusCode)
-		response.Body.Close()
-	}
-
-	blocked, err := postJSONRawWithHeaders(server.URL+"/v1/apps/demo/challenges", map[string]any{
+	initialChallenge := postJSONEnvelopeWithHeaders[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
 		"action":     "ai.ask",
 		"install_id": "install_rate",
+	}, map[string]string{"X-Forwarded-For": "10.10.20.1"}, http.StatusCreated)
+	verified := postJSONEnvelope[attestation.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/verify", map[string]any{
+		"challenge_id": initialChallenge.ChallengeID,
+		"install_id":   "install_rate",
+		"token":        "mock",
+	}, http.StatusOK)
+
+	currentToken := verified.Token
+
+	for i := 0; i < 40; i++ {
+		refreshChallenge := postJSONEnvelopeWithHeaders[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
+			"action":     "ai.ask",
+			"install_id": "install_rate",
+		}, map[string]string{"X-Forwarded-For": "10.10.20." + strconv.Itoa(i+2)}, http.StatusCreated)
+
+		refreshed := postJSONEnvelopeWithHeaders[attestation.VerifyAttestationResponse](t, server.URL+"/v1/apps/demo/attestations/refresh", map[string]any{
+			"current_token": currentToken,
+			"challenge_id":  refreshChallenge.ChallengeID,
+			"install_id":    "install_rate",
+			"token":         "mock",
+		}, map[string]string{"X-Forwarded-For": "10.10.10.10"}, http.StatusOK)
+		currentToken = refreshed.Token
+	}
+
+	finalChallenge := postJSONEnvelopeWithHeaders[attestation.CreateChallengeResponse](t, server.URL+"/v1/apps/demo/challenges", map[string]any{
+		"action":     "ai.ask",
+		"install_id": "install_rate",
+	}, map[string]string{"X-Forwarded-For": "10.10.20.250"}, http.StatusCreated)
+
+	blocked, err := postJSONRawWithHeaders(server.URL+"/v1/apps/demo/attestations/refresh", map[string]any{
+		"current_token": currentToken,
+		"challenge_id":  finalChallenge.ChallengeID,
+		"install_id":    "install_rate",
+		"token":         "mock",
 	}, map[string]string{"X-Forwarded-For": "10.10.10.10"})
 	require.NoError(t, err)
 	defer blocked.Body.Close()

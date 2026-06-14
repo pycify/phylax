@@ -290,6 +290,9 @@ func (s *Service) CreateApp(ctx context.Context, ownerUserID string, projectID s
 	if _, err := s.repository.FindProject(ctx, ownerUserID, projectID); err != nil {
 		return projectmodels.ProjectApp{}, err
 	}
+	if err := validateProviderForPlatform(payload.Platform, payload.Provider); err != nil {
+		return projectmodels.ProjectApp{}, err
+	}
 	if err := validateAppIdentifiers(payload.Platform, payload.PackageName, payload.BundleID); err != nil {
 		return projectmodels.ProjectApp{}, err
 	}
@@ -355,6 +358,9 @@ func (s *Service) UpdateApp(ctx context.Context, ownerUserID string, appID strin
 	}
 	if payload.Enabled != nil {
 		app.Enabled = *payload.Enabled
+	}
+	if err := validateProviderForPlatform(app.Platform, app.Provider); err != nil {
+		return nil, err
 	}
 	if err := validateAppIdentifiers(app.Platform, app.PackageName, app.BundleID); err != nil {
 		return nil, err
@@ -740,6 +746,22 @@ func validateAppIdentifiers(platform enum.AppPlatform, packageName string, bundl
 func validateProviderConfiguration(provider enum.AppProvider, cloudProjectNumber string) error {
 	if provider == enum.AppProviderPlayIntegrity && strings.TrimSpace(cloudProjectNumber) == "" {
 		return fmt.Errorf("%w: play_integrity apps require cloud_project_number", ErrInvalidApp)
+	}
+	return nil
+}
+
+func validateProviderForPlatform(platform enum.AppPlatform, provider enum.AppProvider) error {
+	switch platform {
+	case enum.AppPlatformAndroid:
+		if provider != enum.AppProviderPlayIntegrity && provider != enum.AppProviderFirebase {
+			return fmt.Errorf("%w: android apps support providers play_integrity or firebase_app_check", ErrInvalidApp)
+		}
+	case enum.AppPlatformIOS:
+		if provider != enum.AppProviderAppAttest && provider != enum.AppProviderFirebase {
+			return fmt.Errorf("%w: ios apps support providers app_attest or firebase_app_check", ErrInvalidApp)
+		}
+	default:
+		return fmt.Errorf("%w: unsupported platform", ErrInvalidApp)
 	}
 	return nil
 }
